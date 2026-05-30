@@ -1,9 +1,33 @@
-# uruguay-mcp
+<div align="center">
 
-MCP server that gives AI agents structured access to **Uruguay's open
-government data**: a meta-discovery layer over modular, per-source data tools.
+<img src="https://flagcdn.com/w160/uy.png" alt="Bandera de Uruguay" width="120" />
 
-## Why a meta-discovery layer?
+# 🇺🇾 uruguay-mcp
+
+**Structured AI-agent access to Uruguay's open government data**
+<br>
+*Acceso estructurado de agentes de IA a los datos abiertos del Estado uruguayo*
+
+[![PyPI](https://img.shields.io/pypi/v/uruguay-mcp?color=blue&label=PyPI)](https://pypi.org/project/uruguay-mcp/)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
+[![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-7C3AED)](https://modelcontextprotocol.io/)
+[![Tests](https://img.shields.io/badge/tests-69%20passing-brightgreen)](#development)
+[![Coverage](https://img.shields.io/badge/coverage-86%25-brightgreen)](#development)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
+🌎 **[Español](README.es.md)** · **English**
+
+</div>
+
+---
+
+An [MCP](https://modelcontextprotocol.io/) server that gives AI agents structured
+access to **Uruguay's open government data** — the national data catalog, the
+Central Bank, the statistics institute, Montevideo's city data & realtime
+transport, and the gub.uy service catalog — behind a single **meta-discovery**
+layer.
+
+## ✨ Why a meta-discovery layer?
 
 Instead of flooding the model with hundreds of tool definitions, the server
 exposes **five meta-tools**. The model searches for what it needs, then invokes
@@ -18,119 +42,62 @@ matter how many data sources are added.
 | `plan_query(goal)` | Surface candidate tools for a multi-step goal |
 | `execute_batch(calls)` | Run several calls concurrently with per-call error isolation |
 
-Every tool returns a unified envelope: `{ "_meta": { source, cached, lang, timestamp }, "data": ... }`
-(`timestamp` is a UTC ISO-8601 stamp added on every response).
+Every tool returns a unified envelope: `{ "_meta": { source, cached, lang, timestamp }, "data": ... }`.
 
-At a glance the server currently exposes **5 meta-tools + 31 data tools across
-6 modules**, plus **17 prompts** and **11 resources** (see below).
+> At a glance: **5 meta-tools + 31 data tools across 6 modules**, plus **17
+> prompts** and **11 resources**.
 
-## Data sources (modules)
+## 📚 Data sources (modules)
 
-| Module | Source | Protocol | Tools | Status |
-|---|---|---|---|---|
-| `catalogodatos` | [catalogodatos.gub.uy](https://catalogodatos.gub.uy) — national CKAN catalog (~2680 datasets, 72 orgs) | CKAN REST | 5 | ✅ implemented |
-| `bcu` | Banco Central del Uruguay — exchange rates | SOAP (`zeep`) | 4 | ✅ implemented |
-| `ine` | Instituto Nacional de Estadística — ANDA / microdata | REST | 3 | ✅ implemented |
-| `gubuy` | gub.uy public API / service catalog (CKAN showcase) | CKAN REST | 4 | ✅ implemented |
-| `montevideo` | Intendencia de Montevideo — own CKAN + realtime transport API | CKAN + REST | 11 | ✅ implemented |
-| `datastore` | Cross-source SQLite workspace — load CSV/CKAN resources into tables and run read-only SQL (JOINs across sources) | local SQLite | 4 | ✅ implemented |
+| | Module | Source | Protocol | Tools |
+|---|---|---|---|:--:|
+| 🏛️ | `catalogodatos` | [catalogodatos.gub.uy](https://catalogodatos.gub.uy) — national CKAN catalog (~2680 datasets, 72 orgs) | CKAN REST | 5 |
+| 💵 | `bcu` | Banco Central del Uruguay — exchange rates | SOAP (`zeep`) | 4 |
+| 📊 | `ine` | Instituto Nacional de Estadística — ANDA / microdata | REST | 3 |
+| 🌐 | `gubuy` | gub.uy public API / service catalog | CKAN REST | 4 |
+| 🚌 | `montevideo` | Intendencia de Montevideo — city CKAN + realtime transport | CKAN + REST | 11 |
+| 🗄️ | `datastore` | Cross-source SQLite workspace — load CSV/CKAN data, run read-only SQL JOINs | local SQLite | 4 |
 
-The transport surface of the `montevideo` module needs OAuth2 client
-credentials (`URUGUAY_MCP_MVD_CLIENT_ID` / `URUGUAY_MCP_MVD_CLIENT_SECRET`); without
-them the transport tools return a typed `validation_error` envelope while the
-CKAN tools work unauthenticated.
+The transport surface of `montevideo` needs OAuth2 credentials
+(`URUGUAY_MCP_MVD_CLIENT_ID` / `URUGUAY_MCP_MVD_CLIENT_SECRET`); without them the
+transport tools return a typed `validation_error` while the CKAN tools work
+unauthenticated.
 
-The `datastore` module loads tabular data (a CSV URL or a CKAN resource) into a
-process-wide in-memory SQLite store, then runs **read-only** `SELECT`s across the
-loaded tables — the practical way to JOIN records from two different APIs. It is
-loaded by default.
+## 🧩 Prompts & Resources
 
-## Prompts & Resources
-
-Besides tools, each module registers reusable **prompts** (parameterized,
-Spanish instruction templates) and **resources** (static reference docs under
-the `uru://<module>/<path>` URI scheme). Both are exposed natively through
-FastMCP, so any MCP client can list and render them.
+Each module also registers reusable **prompts** (parameterized Spanish
+instruction templates) and **resources** (static reference docs under the
+`uru://<module>/<path>` URI scheme), exposed natively through FastMCP.
 
 - **17 prompts** — e.g. `bcu_cotizacion_dolar_hoy`, `catalogo_buscar_por_tema`,
-  `ine_buscar_estudios`, `montevideo_proximo_bus`, `gubuy_buscar_servicios`,
-  `datastore_unir_dos_fuentes`.
+  `ine_buscar_estudios`, `montevideo_proximo_bus`, `datastore_unir_dos_fuentes`.
 - **11 resources** — e.g. `uru://bcu/codigos-moneda`,
-  `uru://catalogodatos/guia-de-uso`, `uru://ine/guia-fuentes`,
-  `uru://montevideo/credenciales-transporte`, `uru://datastore/guia-uso`.
+  `uru://catalogodatos/guia-de-uso`, `uru://montevideo/credenciales-transporte`.
 
-See **[EXAMPLES.md](EXAMPLES.md)** for 12 end-to-end usage scenarios (including
+See **[EXAMPLES.md](EXAMPLES.md)** for end-to-end usage scenarios, including
 cross-source ones via `plan_query` / `execute_batch` and SQL JOINs through the
-`datastore` module).
+`datastore` module.
 
-## Architecture
-
-```
-src/uruguay_mcp/
-├── server.py            # FastMCP wiring; meta-tools + registered prompts + resources
-├── cli.py               # `uruguay-mcp [serve]` / `uruguay-mcp install`; -v/--debug logging
-├── meta/                # discovery layer
-│   ├── tools.py         # the 5 meta-tools
-│   └── search.py        # BM25-lite ranking over the registry
-├── shared/              # reused by every module
-│   ├── config.py        # env-driven settings (URUGUAY_MCP_*)
-│   ├── http.py          # async client: retries (tenacity) + rate limit
-│   ├── cache.py         # async TTL cache
-│   ├── rate_limiter.py  # per-host token bucket
-│   ├── envelope.py      # unified {_meta, data} response (+ UTC timestamp)
-│   ├── i18n.py          # es/en messages
-│   ├── errors.py        # typed, localized errors
-│   └── registry.py      # tool/prompt/resource + module registry; @tool/@prompt/@resource
-└── modules/             # one self-contained package per data source
-    ├── catalogodatos/   # constants · schemas · client · tools · prompts · resources
-    ├── bcu/             # Banco Central del Uruguay (SOAP via zeep)
-    ├── ine/             # INE — ANDA studies + CKAN fallback
-    ├── gubuy/           # gub.uy service/API catalog (CKAN showcase)
-    ├── montevideo/      # IM CKAN portal + realtime transport API (OAuth2)
-    └── datastore/       # cross-source SQLite workspace (load + read-only SQL)
-```
-
-Each module package is independent: `constants.py` (URLs/limits), `schemas.py`
-(Pydantic argument models = advertised JSON schema), `client.py` (async API
-wrapper), `tools.py` (`@tool`-decorated handlers), and optionally `prompts.py` /
-`resources.py` (`@prompt` / `@resource` decorators). Importing the package
-self-registers its tools, prompts and resources.
-
-## Install & run
+## 🚀 Quick start
 
 ```bash
-uv venv
-uv pip install -e ".[dev]"
+# Run directly from PyPI (once published)
+uvx uruguay-mcp
 
-# stdio (Claude Desktop / Claude Code)
+# …or install it
+pip install uruguay-mcp        # or: uv pip install uruguay-mcp
 uruguay-mcp
-
-# SSE / HTTP
-uruguay-mcp --transport sse --port 8000
-
-# load only specific modules
-uruguay-mcp --modules catalogodatos
-# or: URUGUAY_MCP_MODULES=catalogodatos uruguay-mcp
-
-# verbose / debug logging (to stderr)
-uruguay-mcp --verbose      # INFO
-uruguay-mcp --debug        # DEBUG
 ```
 
-### One-command install
-
-`uruguay-mcp install` merges the server into Claude Desktop's config (preserving any
-existing `mcpServers` and unrelated keys) and prints a ready-to-paste snippet for
-Claude Code / Cursor:
+### One-command install into Claude
 
 ```bash
 uruguay-mcp install
 ```
 
-On macOS it writes to
-`~/Library/Application Support/Claude/claude_desktop_config.json`; on
-Windows to `%APPDATA%\Claude\...`; on Linux to `~/.config/Claude/...`. Restart
-the client afterwards.
+Merges the server into Claude Desktop's config (preserving existing
+`mcpServers` and unrelated keys) and prints a ready-to-paste snippet for Claude
+Code / Cursor. Restart the client afterwards.
 
 ### Claude Desktop config (manual)
 
@@ -142,9 +109,18 @@ the client afterwards.
 }
 ```
 
-## Configuration
+### Run options
 
-All via `URUGUAY_MCP_*` environment variables (see `shared/config.py`):
+```bash
+uruguay-mcp                          # stdio (default)
+uruguay-mcp --transport sse --port 8000
+uruguay-mcp --modules catalogodatos,bcu   # load only some modules
+uruguay-mcp --verbose                # INFO logs   (--debug for DEBUG)
+```
+
+## ⚙️ Configuration
+
+All via `URUGUAY_MCP_*` environment variables:
 
 | Variable | Default | Meaning |
 |---|---|---|
@@ -156,15 +132,49 @@ All via `URUGUAY_MCP_*` environment variables (see `shared/config.py`):
 | `URUGUAY_MCP_MVD_CLIENT_ID` | _(unset)_ | OAuth2 client id for the Montevideo transport API |
 | `URUGUAY_MCP_MVD_CLIENT_SECRET` | _(unset)_ | OAuth2 client secret for the Montevideo transport API |
 
-## Development
+## 🏗️ Architecture
+
+```
+src/uruguay_mcp/
+├── server.py            # FastMCP wiring; meta-tools + registered prompts + resources
+├── cli.py               # `uruguay-mcp` / `uruguay-mcp install`; -v/--debug logging
+├── meta/                # discovery layer
+│   ├── tools.py         # the 5 meta-tools
+│   └── search.py        # BM25-lite ranking over the registry
+├── shared/              # reused by every module
+│   ├── config.py        # env-driven settings (URUGUAY_MCP_*)
+│   ├── http.py          # async client: retries (tenacity) + per-host rate limit
+│   ├── cache.py         # async TTL cache
+│   ├── envelope.py      # unified {_meta, data} response (+ UTC timestamp)
+│   ├── i18n.py          # es/en messages
+│   ├── errors.py        # typed, localized errors
+│   └── registry.py      # tool/prompt/resource registry; @tool/@prompt/@resource
+└── modules/             # one self-contained package per data source
+    ├── catalogodatos/   ├── bcu/      ├── ine/
+    ├── gubuy/           ├── montevideo/   └── datastore/
+```
+
+Each module package is independent (`constants` · `schemas` · `client` ·
+`tools` · optional `prompts`/`resources`). Importing the package self-registers
+everything it offers.
+
+## 🛠️ Development
 
 ```bash
-uv run pytest                      # unit tests (HTTP mocked, offline)
-uv run pytest -m integration       # hits live government APIs
+uv venv && uv pip install -e ".[dev]"
+
+uv run pytest                  # 69 unit tests (HTTP mocked, offline) · 86% coverage
+uv run pytest -m integration   # hits live government APIs
 uv run ruff check src tests
 uv run pyright
 ```
 
-## License
+## 🙌 Acknowledgements
 
-MIT
+Built on data published by **AGESIC**, **BCU**, **INE** and the **Intendencia de
+Montevideo** under Uruguay's open-data law (Nº 18.381). This project is an
+independent client and is not affiliated with those institutions.
+
+## 📄 License
+
+[MIT](LICENSE)
