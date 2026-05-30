@@ -23,6 +23,7 @@ ALL_MODULES = [
     "salud",
     "mides",
     "noticias",
+    "bps",
 ]
 
 

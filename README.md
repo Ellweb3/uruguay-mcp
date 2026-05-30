@@ -12,7 +12,7 @@
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 [![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-7C3AED)](https://modelcontextprotocol.io/)
 [![CI](https://github.com/Ellweb3/uruguay-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Ellweb3/uruguay-mcp/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-225%20passing-brightgreen)](#development)
+[![Tests](https://img.shields.io/badge/tests-240%20passing-brightgreen)](#development)
 [![Coverage](https://img.shields.io/badge/coverage-89%25-brightgreen)](#development)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
@@ -26,7 +26,8 @@ An [MCP](https://modelcontextprotocol.io/) server that gives AI agents structure
 access to **Uruguay's open government data** — the national data catalog, the
 Central Bank, the statistics institute, Montevideo's city data & realtime
 transport, spatial data (IDE), education, health, social programs, government
-news, and the gub.uy service catalog — behind a single **meta-discovery**
+social-security statistics (BPS), news, and the gub.uy service catalog —
+behind a single **meta-discovery**
 layer.
 
 ## ✨ Why a meta-discovery layer?
@@ -46,8 +47,8 @@ matter how many data sources are added.
 
 Every tool returns a unified envelope: `{ "_meta": { source, cached, lang, timestamp }, "data": ... }`.
 
-> At a glance: **5 meta-tools + 75 data tools across 15 modules**, plus **50
-> prompts** and **32 resources**.
+> At a glance: **5 meta-tools + 80 data tools across 16 modules**, plus **52
+> prompts** and **34 resources**.
 
 ## 📚 Data sources (modules)
 
@@ -67,6 +68,7 @@ Every tool returns a unified envelope: `{ "_meta": { source, cached, lang, times
 | 🎓 | `educacion` | ANEP / education — datasets & school directories (national CKAN, org=anep) | CKAN REST | 3 |
 | 🏥 | `salud` | Salud (MSP / FNR) — health datasets, clinics & medication spending | CKAN REST | 5 |
 | 🤝 | `mides` | MIDES — social programs & the *Guía de Recursos* service directory | CKAN + HTML | 4 |
+| 🧓 | `bps` | Banco de Previsión Social — "BPS en Cifras" observatory: pensions, benefits & contributors (live indicators) | REST (JSON) | 5 |
 | 📰 | `noticias` | gub.uy government news — latest releases & full-text search | HTML scrape | 2 |
 
 The transport surface of `montevideo` needs OAuth2 credentials
@@ -80,11 +82,12 @@ Each module also registers reusable **prompts** (parameterized Spanish
 instruction templates) and **resources** (static reference docs under the
 `uru://<module>/<path>` URI scheme), exposed natively through FastMCP.
 
-- **50 prompts** — e.g. `bcu_cotizacion_dolar_hoy`, `catalogo_buscar_por_tema`,
+- **52 prompts** — e.g. `bcu_cotizacion_dolar_hoy`, `catalogo_buscar_por_tema`,
+  `bps_pasividades_actuales`,
   `ine_buscar_estudios`, `montevideo_proximo_bus`, `datastore_unir_dos_fuentes`,
   `acce_analizar_compra`, `impo_consultar_norma`, `inumet_clima_actual`,
   `ide_consultar_catastro`, `salud_consultar_medicamentos`, `noticias_ultimas`.
-- **32 resources** — e.g. `uru://bcu/codigos-moneda`,
+- **34 resources** — e.g. `uru://bcu/codigos-moneda`, `uru://bps/catalogo-indicadores`,
   `uru://catalogodatos/guia-de-uso`, `uru://montevideo/credenciales-transporte`,
   `uru://acce/glosario-ocds`, `uru://impo/esquema`, `uru://inumet/variables`,
   `uru://ide/capas-destacadas`, `uru://salud/fuentes`, `uru://mides/guia-recursos`.
@@ -169,7 +172,8 @@ src/uruguay_mcp/
     ├── gubuy/           ├── montevideo/   ├── datastore/
     ├── acce/            ├── impo/         ├── inumet/
     ├── parlamento/      ├── ide/          ├── educacion/
-    ├── salud/           ├── mides/        └── noticias/
+    ├── salud/           ├── mides/        ├── noticias/
+    └── bps/
 ```
 
 Each module package is independent (`constants` · `schemas` · `client` ·
@@ -181,7 +185,7 @@ everything it offers.
 ```bash
 uv venv && uv pip install -e ".[dev]"
 
-uv run pytest                  # 225 unit tests (HTTP mocked, offline) · 89% coverage
+uv run pytest                  # 240 unit tests (HTTP mocked, offline) · 89% coverage
 uv run pytest -m integration   # hits live government APIs
 uv run ruff check src tests
 uv run pyright

@@ -12,7 +12,7 @@
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 [![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-7C3AED)](https://modelcontextprotocol.io/)
 [![CI](https://github.com/Ellweb3/uruguay-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Ellweb3/uruguay-mcp/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-225%20passing-brightgreen)](#desarrollo)
+[![Tests](https://img.shields.io/badge/tests-240%20passing-brightgreen)](#desarrollo)
 [![Coverage](https://img.shields.io/badge/coverage-89%25-brightgreen)](#desarrollo)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
@@ -26,8 +26,9 @@ Un servidor [MCP](https://modelcontextprotocol.io/) que le da a los agentes de I
 acceso estructurado a los **datos abiertos del Estado uruguayo** — el catálogo
 nacional de datos, el Banco Central, el Instituto Nacional de Estadística, los
 datos y el transporte en tiempo real de Montevideo, datos espaciales (IDE),
-educación, salud, programas sociales, noticias de gobierno, y el catálogo de
-servicios gub.uy — detrás de una única capa de **meta-descubrimiento**.
+educación, salud, programas sociales, seguridad social (BPS), noticias de
+gobierno, y el catálogo de servicios gub.uy — detrás de una única capa de
+**meta-descubrimiento**.
 
 ## ✨ ¿Por qué una capa de meta-descubrimiento?
 
@@ -46,8 +47,8 @@ visible en el prompt se mantiene constante sin importar cuántas fuentes se agre
 
 Cada herramienta devuelve un sobre unificado: `{ "_meta": { source, cached, lang, timestamp }, "data": ... }`.
 
-> En resumen: **5 meta-herramientas + 75 herramientas de datos en 15 módulos**,
-> más **50 prompts** y **32 recursos**.
+> En resumen: **5 meta-herramientas + 80 herramientas de datos en 16 módulos**,
+> más **52 prompts** y **34 recursos**.
 
 ## 📚 Fuentes de datos (módulos)
 
@@ -67,6 +68,7 @@ Cada herramienta devuelve un sobre unificado: `{ "_meta": { source, cached, lang
 | 🎓 | `educacion` | ANEP / educación — datasets y directorios de centros (CKAN nacional, org=anep) | CKAN REST | 3 |
 | 🏥 | `salud` | Salud (MSP / FNR) — datasets de salud, policlínicas y gasto en medicamentos | CKAN REST | 5 |
 | 🤝 | `mides` | MIDES — programas sociales y la *Guía de Recursos* de servicios | CKAN + HTML | 4 |
+| 🧓 | `bps` | Banco de Previsión Social — observatorio "BPS en Cifras": pasividades, prestaciones y cotizantes (indicadores en vivo) | REST (JSON) | 5 |
 | 📰 | `noticias` | Noticias de gobierno gub.uy — últimas publicaciones y búsqueda de texto | scraping HTML | 2 |
 
 La parte de transporte de `montevideo` requiere credenciales OAuth2
@@ -81,11 +83,12 @@ en español, parametrizadas) y **recursos** (documentos de referencia estáticos
 bajo el esquema de URI `uru://<módulo>/<ruta>`), expuestos de forma nativa a
 través de FastMCP.
 
-- **50 prompts** — p. ej. `bcu_cotizacion_dolar_hoy`, `catalogo_buscar_por_tema`,
+- **52 prompts** — p. ej. `bcu_cotizacion_dolar_hoy`, `catalogo_buscar_por_tema`,
+  `bps_pasividades_actuales`,
   `ine_buscar_estudios`, `montevideo_proximo_bus`, `datastore_unir_dos_fuentes`,
   `acce_analizar_compra`, `impo_consultar_norma`, `inumet_clima_actual`,
   `ide_consultar_catastro`, `salud_consultar_medicamentos`, `noticias_ultimas`.
-- **32 recursos** — p. ej. `uru://bcu/codigos-moneda`,
+- **34 recursos** — p. ej. `uru://bcu/codigos-moneda`, `uru://bps/catalogo-indicadores`,
   `uru://catalogodatos/guia-de-uso`, `uru://montevideo/credenciales-transporte`,
   `uru://acce/glosario-ocds`, `uru://impo/esquema`, `uru://inumet/variables`,
   `uru://ide/capas-destacadas`, `uru://salud/fuentes`, `uru://mides/guia-recursos`.
@@ -170,7 +173,8 @@ src/uruguay_mcp/
     ├── gubuy/           ├── montevideo/   ├── datastore/
     ├── acce/            ├── impo/         ├── inumet/
     ├── parlamento/      ├── ide/          ├── educacion/
-    ├── salud/           ├── mides/        └── noticias/
+    ├── salud/           ├── mides/        ├── noticias/
+    └── bps/
 ```
 
 Cada módulo es independiente (`constants` · `schemas` · `client` · `tools` ·
@@ -182,7 +186,7 @@ todo lo que ofrece.
 ```bash
 uv venv && uv pip install -e ".[dev]"
 
-uv run pytest                  # 225 tests unitarios (HTTP mockeado, offline) · 89% cobertura
+uv run pytest                  # 240 tests unitarios (HTTP mockeado, offline) · 89% cobertura
 uv run pytest -m integration   # consulta las APIs de gobierno reales
 uv run ruff check src tests
 uv run pyright
