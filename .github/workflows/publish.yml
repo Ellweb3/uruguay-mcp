@@ -2,19 +2,22 @@ name: Publish to PyPI
 
 # Publishes to PyPI on every pushed tag like v0.1.1, using PyPI Trusted
 # Publishing (OpenID Connect) — no API tokens stored in GitHub.
+# `workflow_dispatch` allows a manual run (e.g. to re-publish or smoke-test
+# the pipeline); `skip-existing` keeps that idempotent.
 on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
 
 jobs:
   test:
     name: Test & lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
       - name: Sync deps
@@ -28,10 +31,11 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
       - name: Verify tag matches pyproject version
+        if: github.ref_type == 'tag'
         run: |
           tag="${GITHUB_REF_NAME#v}"
           ver="$(grep -m1 '^version = ' pyproject.toml | sed -E 's/version = "(.*)"/\1/')"
@@ -41,7 +45,7 @@ jobs:
             exit 1
           fi
       - run: uv build
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
@@ -57,9 +61,11 @@ jobs:
     permissions:
       id-token: write # required for Trusted Publishing (OIDC)
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: dist
           path: dist/
       - name: Publish to PyPI (Trusted Publishing)
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
