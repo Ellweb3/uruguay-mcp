@@ -12,11 +12,12 @@ from __future__ import annotations
 
 import json
 from typing import Any
+from urllib.parse import quote_plus
 
 import httpx
 
 from ...shared import cache, errors, http
-from .constants import API_NAME, BASE_URL, ENCODING
+from .constants import API_NAME, BASE_URL, ENCODING, NEWS_FEED_URL, SEARCH_FEED_URL
 
 
 async def _get_json_latin1(url: str, key: str) -> tuple[Any, bool, str]:
@@ -58,3 +59,39 @@ async def get_norma(slug: str, ruta: str) -> tuple[Any, bool, str]:
     url = f"{BASE_URL}/bases/{slug}/{ruta}?json=true"
     key = f"impo:norma:{slug}:{ruta}"
     return await _get_json_latin1(url, key)
+
+
+async def _fetch_feed(url: str, key: str) -> tuple[str, bool, str]:
+    """GET un feed RSS de WordPress (UTF-8) como texto crudo (cacheado).
+
+    Los feeds (/?s=...&feed=rss2 y /feed/) son UTF-8, a diferencia de las bases
+    ?json=true (latin-1). Se devuelve el texto para parsearlo con ElementTree.
+    """
+
+    async def producer() -> str:
+        try:
+            resp = await http._request("GET", url, api=API_NAME)
+        except http._RetryableStatus as exc:
+            raise errors.upstream(API_NAME, str(exc)) from exc
+        except httpx.TransportError as exc:
+            raise errors.upstream(API_NAME, str(exc)) from exc
+        if resp.status_code >= 400:
+            raise errors.upstream(
+                API_NAME, f"HTTP {resp.status_code}", status=resp.status_code
+            )
+        return resp.text
+
+    value, cached_flag = await cache.get_or_set(key, producer)
+    return value, cached_flag, url
+
+
+async def fetch_search_feed(query: str, paged: int) -> tuple[str, bool, str]:
+    """Feed RSS de la búsqueda full-text del sitio (/?s=...&feed=rss2&paged=N)."""
+    url = SEARCH_FEED_URL.format(query=quote_plus(query), paged=paged)
+    key = f"impo:search:{query}:{paged}"
+    return await _fetch_feed(url, key)
+
+
+async def fetch_news_feed() -> tuple[str, bool, str]:
+    """Feed RSS de novedades/noticias editoriales del sitio (/feed/)."""
+    return await _fetch_feed(NEWS_FEED_URL, "impo:feed")

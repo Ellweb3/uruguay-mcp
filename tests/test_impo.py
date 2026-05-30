@@ -10,7 +10,7 @@ import respx
 
 import uruguay_mcp.modules.impo  # noqa: F401
 from uruguay_mcp.meta import tools as meta
-from uruguay_mcp.modules.impo.constants import BASE_URL
+from uruguay_mcp.modules.impo.constants import BASE_URL, NEWS_FEED_URL
 from uruguay_mcp.shared import cache, http
 from uruguay_mcp.shared.registry import registry
 
@@ -216,12 +216,216 @@ async def test_buscar_degrades_to_search_urls():
     assert any("/?s=" in u for u in urls)
 
 
+# --- RSS feeds (búsqueda full-text + novedades) --------------------------
+_SEARCH_RSS = """<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>IMPO Search</title>
+    <item>
+      <title>Protección de Datos Personales</title>
+      <link>https://www.impo.com.uy/lenguajeciudadano/datos-personales</link>
+      <pubDate>Mon, 12 May 2025 10:00:00 +0000</pubDate>
+      <dc:creator>IMPO</dc:creator>
+      <category>Lenguaje Ciudadano</category>
+      <category>Normativa</category>
+    </item>
+    <item>
+      <title>Habeas Data</title>
+      <link>https://www.impo.com.uy/lenguajeciudadano/habeas-data</link>
+      <pubDate>Tue, 13 May 2025 10:00:00 +0000</pubDate>
+      <dc:creator>Redacción</dc:creator>
+      <category>Lenguaje Ciudadano</category>
+    </item>
+  </channel>
+</rss>
+"""
+
+_EMPTY_RSS = """<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel><title>IMPO Search</title></channel>
+</rss>
+"""
+
+_NEWS_RSS = """<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>IMPO Novedades</title>
+    <lastBuildDate>Wed, 28 May 2026 12:00:00 +0000</lastBuildDate>
+    <item>
+      <title>Ley N° 20.446 – Presupuesto Nacional [Nuevo]</title>
+      <link>https://www.impo.com.uy/editorial/ley-20446</link>
+      <pubDate>Wed, 28 May 2026 11:00:00 +0000</pubDate>
+      <dc:creator>Editorial</dc:creator>
+      <category>Novedades editoriales</category>
+      <category>Publicaciones Jurídicas</category>
+    </item>
+    <item>
+      <title>Boletín mensual</title>
+      <link>https://www.impo.com.uy/editorial/boletin</link>
+      <pubDate>Tue, 27 May 2026 11:00:00 +0000</pubDate>
+      <dc:creator>Editorial</dc:creator>
+      <category>Novedades editoriales</category>
+    </item>
+  </channel>
+</rss>
+"""
+
+
+@respx.mock
+async def test_buscar_texto_parses_feed_items():
+    route = respx.get(f"{BASE_URL}/").mock(
+        return_value=httpx.Response(
+            200, text=_SEARCH_RSS, headers={"Content-Type": "application/rss+xml"}
+        )
+    )
+
+    out = await meta.call_tool(
+        "impo_buscar_texto", {"query": "datos personales", "pagina": 1}
+    )
+
+    assert route.called
+    params = dict(route.calls.last.request.url.params)
+    assert params["s"] == "datos personales"
+    assert params["feed"] == "rss2"
+    assert params["paged"] == "1"
+    assert out["_meta"]["source"]["api"] == "impo.com.uy"
+    body = out["data"]
+    assert body["count"] == 2
+    first = body["results"][0]
+    assert first["titulo"] == "Protección de Datos Personales"
+    assert first["autor"] == "IMPO"  # dc:creator namespaced
+    assert first["categorias"] == ["Lenguaje Ciudadano", "Normativa"]
+
+
+@respx.mock
+async def test_buscar_texto_max_resultados_caps():
+    respx.get(f"{BASE_URL}/").mock(
+        return_value=httpx.Response(200, text=_SEARCH_RSS)
+    )
+    out = await meta.call_tool(
+        "impo_buscar_texto", {"query": "datos", "max_resultados": 1}
+    )
+    assert out["data"]["count"] == 1
+
+
+@respx.mock
+async def test_buscar_texto_empty_feed_is_not_error():
+    respx.get(f"{BASE_URL}/").mock(
+        return_value=httpx.Response(200, text=_EMPTY_RSS)
+    )
+    out = await meta.call_tool("impo_buscar_texto", {"query": "zxqwzxqw"})
+    assert "error" not in out
+    assert out["data"]["count"] == 0
+    assert out["data"]["results"] == []
+
+
+@respx.mock
+async def test_buscar_texto_caches_second_call():
+    route = respx.get(f"{BASE_URL}/").mock(
+        return_value=httpx.Response(200, text=_SEARCH_RSS)
+    )
+    first = await meta.call_tool("impo_buscar_texto", {"query": "datos"})
+    second = await meta.call_tool("impo_buscar_texto", {"query": "datos"})
+    assert first["_meta"]["cached"] is False
+    assert second["_meta"]["cached"] is True
+    assert route.call_count == 1
+
+
+@respx.mock
+async def test_novedades_parses_news_feed():
+    route = respx.get(NEWS_FEED_URL).mock(
+        return_value=httpx.Response(200, text=_NEWS_RSS)
+    )
+    out = await meta.call_tool("impo_novedades", {})
+    assert route.called
+    body = out["data"]
+    assert body["count"] == 2
+    assert body["results"][0]["titulo"].startswith("Ley N° 20.446")
+    assert body["results"][0]["autor"] == "Editorial"
+
+
+@respx.mock
+async def test_novedades_filters_by_categoria():
+    respx.get(NEWS_FEED_URL).mock(return_value=httpx.Response(200, text=_NEWS_RSS))
+    out = await meta.call_tool(
+        "impo_novedades", {"categoria": "Publicaciones Jurídicas"}
+    )
+    body = out["data"]
+    assert body["count"] == 1
+    assert body["results"][0]["titulo"].startswith("Ley N° 20.446")
+
+
+_REF_PAYLOAD = {
+    "tipoNorma": "Ley",
+    "nroNorma": "18331",
+    "anioNorma": "2008",
+    "nombreNorma": "Protección de Datos Personales",
+    "referenciasNorma": (
+        'Reglamentada por: <a href="/bases/decretos/414-2009">Decreto Nº 414/009</a>. '
+        'Ver: <a href="/bases/leyes/19438-2016/189">Ley Nº 19.438, artículo 189</a>.'
+    ),
+    "urlReferenciasNorma": None,
+    "indexacionNorma": None,
+    "camposNorma": None,
+}
+
+
+@respx.mock
+async def test_referencias_norma_extracts_links():
+    url = f"{BASE_URL}/bases/leyes/18331-2008"
+    route = respx.get(url).mock(return_value=_latin1_response(_REF_PAYLOAD))
+
+    out = await meta.call_tool(
+        "impo_referencias_norma", {"tipo": "ley", "numero": "18331", "anio": 2008}
+    )
+
+    assert route.called
+    data = out["data"]
+    assert data["totalReferencias"] == 2
+    refs = data["referencias"]
+    assert refs[0] == {
+        "tipo": "decreto",
+        "numero": "414",
+        "anio": 2009,
+        "articulo": None,
+        "url": f"{BASE_URL}/bases/decretos/414-2009",
+    }
+    assert refs[1]["tipo"] == "ley"
+    assert refs[1]["numero"] == "19438"
+    assert refs[1]["articulo"] == "189"
+    # Texto plano sin etiquetas HTML.
+    assert "<a" not in data["referenciasTexto"]
+    assert "Reglamentada por" in data["referenciasTexto"]
+
+
+@respx.mock
+async def test_referencias_norma_no_field_returns_empty():
+    url = f"{BASE_URL}/bases/leyes/18331-2008"
+    respx.get(url).mock(return_value=_latin1_response(_LEY_PAYLOAD))
+
+    out = await meta.call_tool(
+        "impo_referencias_norma", {"tipo": "ley", "numero": "18331", "anio": 2008}
+    )
+    assert "error" not in out
+    assert out["data"]["totalReferencias"] == 0
+    assert out["data"]["referencias"] == []
+    assert out["data"]["referenciasTexto"] is None
+
+
+async def test_referencias_norma_missing_numero_is_validation_error():
+    out = await meta.call_tool(
+        "impo_referencias_norma", {"tipo": "ley", "anio": 2008}
+    )
+    assert out["error"]["code"] == "validation_error"
+
+
 def test_module_prompts_registered():
     names = {p.name for p in registry.prompts() if p.module == "impo"}
     assert {
         "impo_consultar_norma",
         "impo_diario_del_dia",
         "impo_buscar_normativa_guia",
+        "impo_buscar_texto_guia",
     } <= names
 
 
@@ -236,3 +440,6 @@ def test_prompt_text_references_real_tools():
         tipo="ley", numero="18331", anio="2008"
     )
     assert "impo_diario_oficial" in by_name["impo_diario_del_dia"].handler()
+    guia = by_name["impo_buscar_texto_guia"].handler(query="datos")
+    assert "impo_buscar_texto" in guia
+    assert "impo_novedades" in guia

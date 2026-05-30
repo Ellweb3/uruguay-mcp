@@ -11,8 +11,8 @@
 [![PyPI](https://img.shields.io/pypi/v/uruguay-mcp?color=blue&label=PyPI)](https://pypi.org/project/uruguay-mcp/)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 [![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-7C3AED)](https://modelcontextprotocol.io/)
-[![Tests](https://img.shields.io/badge/tests-129%20passing-brightgreen)](#development)
-[![Coverage](https://img.shields.io/badge/coverage-88%25-brightgreen)](#development)
+[![Tests](https://img.shields.io/badge/tests-204%20passing-brightgreen)](#development)
+[![Coverage](https://img.shields.io/badge/coverage-89%25-brightgreen)](#development)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 🌎 **[Español](README.es.md)** · **English**
@@ -24,7 +24,8 @@
 An [MCP](https://modelcontextprotocol.io/) server that gives AI agents structured
 access to **Uruguay's open government data** — the national data catalog, the
 Central Bank, the statistics institute, Montevideo's city data & realtime
-transport, and the gub.uy service catalog — behind a single **meta-discovery**
+transport, spatial data (IDE), education, health, social programs, government
+news, and the gub.uy service catalog — behind a single **meta-discovery**
 layer.
 
 ## ✨ Why a meta-discovery layer?
@@ -44,8 +45,8 @@ matter how many data sources are added.
 
 Every tool returns a unified envelope: `{ "_meta": { source, cached, lang, timestamp }, "data": ... }`.
 
-> At a glance: **5 meta-tools + 49 data tools across 10 modules**, plus **29
-> prompts** and **19 resources**.
+> At a glance: **5 meta-tools + 71 data tools across 15 modules**, plus **43
+> prompts** and **28 resources**.
 
 ## 📚 Data sources (modules)
 
@@ -61,6 +62,11 @@ Every tool returns a unified envelope: `{ "_meta": { source, cached, lang, times
 | ⚖️ | `impo` | IMPO — legislation, normativa & Diario Oficial | REST (JSON) | 3 |
 | 🌦️ | `inumet` | Instituto Uruguayo de Meteorología — stations, forecast & alerts | REST + HTML | 3 |
 | 🏛️ | `parlamento` | Parlamento del Uruguay — datasets, attendance & activity (CKAN-backed) | CKAN REST | 4 |
+| 🗺️ | `ide` | IDE Uruguay (AGESIC) — spatial data: WFS layers, cadastral parcels & geocoding | WFS 2.0 + REST | 5 |
+| 🎓 | `educacion` | ANEP / education — datasets & school directories (national CKAN, org=anep) | CKAN REST | 3 |
+| 🏥 | `salud` | Salud (MSP / FNR) — health datasets, clinics & medication spending | CKAN REST | 5 |
+| 🤝 | `mides` | MIDES — social programs & the *Guía de Recursos* service directory | CKAN + HTML | 4 |
+| 📰 | `noticias` | gub.uy government news — latest releases & full-text search | HTML scrape | 2 |
 
 The transport surface of `montevideo` needs OAuth2 credentials
 (`URUGUAY_MCP_MVD_CLIENT_ID` / `URUGUAY_MCP_MVD_CLIENT_SECRET`); without them the
@@ -73,12 +79,14 @@ Each module also registers reusable **prompts** (parameterized Spanish
 instruction templates) and **resources** (static reference docs under the
 `uru://<module>/<path>` URI scheme), exposed natively through FastMCP.
 
-- **29 prompts** — e.g. `bcu_cotizacion_dolar_hoy`, `catalogo_buscar_por_tema`,
+- **43 prompts** — e.g. `bcu_cotizacion_dolar_hoy`, `catalogo_buscar_por_tema`,
   `ine_buscar_estudios`, `montevideo_proximo_bus`, `datastore_unir_dos_fuentes`,
-  `acce_analizar_compra`, `impo_consultar_norma`, `inumet_clima_actual`.
-- **19 resources** — e.g. `uru://bcu/codigos-moneda`,
+  `acce_analizar_compra`, `impo_consultar_norma`, `inumet_clima_actual`,
+  `ide_consultar_catastro`, `salud_consultar_medicamentos`, `noticias_ultimas`.
+- **28 resources** — e.g. `uru://bcu/codigos-moneda`,
   `uru://catalogodatos/guia-de-uso`, `uru://montevideo/credenciales-transporte`,
-  `uru://acce/glosario-ocds`, `uru://impo/esquema`, `uru://inumet/variables`.
+  `uru://acce/glosario-ocds`, `uru://impo/esquema`, `uru://inumet/variables`,
+  `uru://ide/capas-destacadas`, `uru://salud/fuentes`, `uru://mides/guia-recursos`.
 
 See **[EXAMPLES.md](EXAMPLES.md)** for end-to-end usage scenarios, including
 cross-source ones via `plan_query` / `execute_batch` and SQL JOINs through the
@@ -159,7 +167,8 @@ src/uruguay_mcp/
     ├── catalogodatos/   ├── bcu/          ├── ine/
     ├── gubuy/           ├── montevideo/   ├── datastore/
     ├── acce/            ├── impo/         ├── inumet/
-    └── parlamento/
+    ├── parlamento/      ├── ide/          ├── educacion/
+    ├── salud/           ├── mides/        └── noticias/
 ```
 
 Each module package is independent (`constants` · `schemas` · `client` ·
@@ -171,7 +180,7 @@ everything it offers.
 ```bash
 uv venv && uv pip install -e ".[dev]"
 
-uv run pytest                  # 129 unit tests (HTTP mocked, offline) · 88% coverage
+uv run pytest                  # 204 unit tests (HTTP mocked, offline) · 89% coverage
 uv run pytest -m integration   # hits live government APIs
 uv run ruff check src tests
 uv run pyright

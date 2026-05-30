@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import xml.etree.ElementTree as ET
 from datetime import date, datetime
 from typing import Any
 from urllib.parse import quote_plus
@@ -14,13 +15,22 @@ from . import client
 from .constants import (
     API_NAME,
     BASE_URL,
+    DC_NS,
     DIARIO_SECCIONES,
     MAX_ARTICULOS,
+    MAX_FEED_ITEMS,
     MODULE,
     TIPO_SLUGS,
     TIPOS_CON_ORIGINAL,
 )
-from .schemas import BuscarNormativaArgs, DiarioOficialArgs, GetNormaArgs
+from .schemas import (
+    BuscarNormativaArgs,
+    BuscarTextoArgs,
+    DiarioOficialArgs,
+    GetNormaArgs,
+    NovedadesArgs,
+    ReferenciasNormaArgs,
+)
 
 # Las URLs relativas que devuelve IMPO (urlArticulo, urlVerImagen, ...) deben
 # prefijarse con el host para ser utilizables.
@@ -296,3 +306,216 @@ async def buscar_normativa(
         cached=False,
         extra={"degraded": True},
     )
+
+
+# --- Feeds RSS (búsqueda full-text + novedades) --------------------------
+_DC_CREATOR = f"{{{DC_NS}}}creator"
+
+
+def _parse_feed_items(xml_text: str) -> list[dict[str, Any]]:
+    """Proyectar los <item> de un feed RSS de WordPress a campos útiles.
+
+    Un feed sin resultados trae un <channel> válido sin <item>: se devuelve
+    una lista vacía (no es un error).
+    """
+    root = ET.fromstring(xml_text)
+    items: list[dict[str, Any]] = []
+    for item in root.iter("item"):
+        categorias = [
+            (c.text or "").strip()
+            for c in item.findall("category")
+            if (c.text or "").strip()
+        ]
+        items.append(
+            {
+                "titulo": (item.findtext("title") or "").strip() or None,
+                "url": (item.findtext("link") or "").strip() or None,
+                "fecha": (item.findtext("pubDate") or "").strip() or None,
+                "autor": (item.findtext(_DC_CREATOR) or "").strip() or None,
+                "categorias": categorias,
+            }
+        )
+    return items
+
+
+@tool(
+    name="impo_buscar_texto",
+    module=MODULE,
+    summary=(
+        "Búsqueda full-text REAL en el sitio/normativa de IMPO vía el feed RSS de "
+        "WordPress (/?s=...&feed=rss2). Devuelve coincidencias estructuradas "
+        "(titulo, url, fecha, autor, categorias) con paginación. Usala cuando el "
+        "usuario tiene un tema/palabras clave pero no tipo/número/año."
+    ),
+    params_model=BuscarTextoArgs,
+    keywords=[
+        "impo",
+        "buscar",
+        "busqueda",
+        "search",
+        "texto",
+        "normativa",
+        "tema",
+        "topic",
+        "ley",
+        "decreto",
+        "uruguay",
+        "full-text",
+    ],
+)
+async def buscar_texto(
+    query: str, pagina: int = 1, max_resultados: int = MAX_FEED_ITEMS
+) -> dict[str, Any]:
+    if not query or not query.strip():
+        raise errors.ValidationError("'query' es obligatorio y no puede estar vacío.")
+    xml_text, cached, url = await client.fetch_search_feed(query, pagina)
+    items = _parse_feed_items(xml_text)[:max_resultados]
+    return envelope(
+        {"query": query, "pagina": pagina, "count": len(items), "results": items},
+        api=API_NAME,
+        url=url,
+        cached=cached,
+    )
+
+
+@tool(
+    name="impo_novedades",
+    module=MODULE,
+    summary=(
+        "Últimas novedades y publicaciones editoriales de IMPO (incluye anuncios de "
+        "'nueva ley') desde el feed RSS de noticias /feed/. Devuelve titulo, url, "
+        "fecha, autor y categorias. Responde 'qué hay de nuevo / publicado "
+        "recientemente en la normativa uruguaya'."
+    ),
+    params_model=NovedadesArgs,
+    keywords=[
+        "impo",
+        "novedades",
+        "noticias",
+        "news",
+        "feed",
+        "rss",
+        "ultimas leyes",
+        "nuevo",
+        "reciente",
+        "diario",
+        "uruguay",
+    ],
+)
+async def novedades(
+    max_resultados: int = MAX_FEED_ITEMS, categoria: str | None = None
+) -> dict[str, Any]:
+    xml_text, cached, url = await client.fetch_news_feed()
+    items = _parse_feed_items(xml_text)
+    if categoria:
+        low = categoria.lower()
+        items = [
+            it for it in items if any(low in c.lower() for c in it["categorias"])
+        ]
+    items = items[:max_resultados]
+    return envelope(
+        {"count": len(items), "results": items},
+        api=API_NAME,
+        url=url,
+        cached=cached,
+    )
+
+
+# --- Referencias cruzadas (grafo de normas) ------------------------------
+# slug de base -> tipo público (para clasificar los hrefs de referenciasNorma).
+_SLUG_TO_TIPO = {
+    "leyes": "ley",
+    "leyes-originales": "ley",
+    "decretos": "decreto",
+    "decretos-originales": "decreto",
+    "constitucion": "constitucion",
+}
+# href de la forma /bases/{slug}/{numero}-{anio}(/{articulo})?
+_REF_HREF_RE = re.compile(
+    r'href="(/bases/([a-z-]+)/(\d+)-((?:19|20)\d{2})(?:/(\d+))?)"'
+)
+
+
+def _parse_referencias(html: str | None) -> tuple[str | None, list[dict[str, Any]]]:
+    """Extraer texto legible + enlaces estructurados de ``referenciasNorma``.
+
+    ``referenciasNorma`` es un string HTML con <a href="/bases/..."> a otras
+    normas. Se devuelve ``(texto_plano, enlaces)``; si está vacío o ausente,
+    ``(None, [])`` (no es error).
+    """
+    if not html:
+        return None, []
+    enlaces: list[dict[str, Any]] = []
+    for m in _REF_HREF_RE.finditer(html):
+        ruta, slug, numero, anio, articulo = m.groups()
+        enlaces.append(
+            {
+                "tipo": _SLUG_TO_TIPO.get(slug, slug),
+                "numero": numero,
+                "anio": int(anio),
+                "articulo": articulo,
+                "url": _abs_url(ruta),
+            }
+        )
+    return _strip_html(html), enlaces
+
+
+@tool(
+    name="impo_referencias_norma",
+    module=MODULE,
+    summary=(
+        "Extraer el grafo de referencias cruzadas de una norma: parsea el campo "
+        "'referenciasNorma' del JSON ?json=true (que impo_get_norma descarta) y "
+        "devuelve el texto plano de las referencias y una lista estructurada de "
+        "normas enlazadas (tipo, numero, anio, articulo, url). Permite recorrer "
+        "enlaces 'reglamentada por / modificada por / ver'."
+    ),
+    params_model=ReferenciasNormaArgs,
+    keywords=[
+        "impo",
+        "referencias",
+        "cross-reference",
+        "reglamentada",
+        "modificada",
+        "relacionada",
+        "norma",
+        "ley",
+        "decreto",
+        "grafo",
+        "uruguay",
+    ],
+)
+async def referencias_norma(
+    tipo: str,
+    anio: int,
+    numero: str | None = None,
+    version: str = "consolidada",
+) -> dict[str, Any]:
+    if tipo not in TIPO_SLUGS:
+        raise errors.ValidationError(
+            "tipo inválido; usá 'ley', 'decreto' o 'constitucion'."
+        )
+    slug, ruta = _build_norma_ruta(tipo, numero, anio)
+    if version == "original":
+        if tipo not in TIPOS_CON_ORIGINAL:
+            raise errors.ValidationError(
+                "version 'original' sólo aplica a 'ley' y 'decreto'."
+            )
+        slug = f"{slug}-originales"
+    elif version != "consolidada":
+        raise errors.ValidationError("version inválida; usá 'consolidada' u 'original'.")
+
+    doc, cached, url = await client.get_norma(slug, ruta)
+    if not isinstance(doc, dict):
+        raise errors.upstream(API_NAME, "respuesta inesperada (no es un objeto)")
+    texto, enlaces = _parse_referencias(doc.get("referenciasNorma"))
+    data = {
+        "tipoNorma": doc.get("tipoNorma"),
+        "nroNorma": doc.get("nroNorma"),
+        "anioNorma": doc.get("anioNorma"),
+        "nombreNorma": doc.get("nombreNorma"),
+        "referenciasTexto": texto,
+        "referencias": enlaces,
+        "totalReferencias": len(enlaces),
+    }
+    return envelope(data, api=API_NAME, url=url, cached=cached)

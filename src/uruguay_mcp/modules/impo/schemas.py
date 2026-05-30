@@ -10,7 +10,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from .constants import MAX_ARTICULOS
+from .constants import MAX_ARTICULOS, MAX_FEED_ITEMS
 
 
 class GetNormaArgs(BaseModel):
@@ -83,4 +83,70 @@ class BuscarNormativaArgs(BaseModel):
         ge=1800,
         le=2100,
         description="Año de 4 dígitos opcional (para atajo a la norma directa).",
+    )
+
+
+class BuscarTextoArgs(BaseModel):
+    query: str = Field(
+        ...,
+        min_length=1,
+        description=(
+            "Texto a buscar en el sitio de IMPO (ej. 'datos personales'). "
+            "Búsqueda full-text real vía el feed RSS de WordPress."
+        ),
+    )
+    pagina: int = Field(
+        1,
+        ge=1,
+        le=100,
+        description="Página de resultados (1-based, 10 resultados por página).",
+    )
+    max_resultados: int = Field(
+        MAX_FEED_ITEMS,
+        ge=1,
+        le=MAX_FEED_ITEMS,
+        description="Cantidad máxima de resultados a devolver (tope 10).",
+    )
+
+
+class NovedadesArgs(BaseModel):
+    max_resultados: int = Field(
+        MAX_FEED_ITEMS,
+        ge=1,
+        le=MAX_FEED_ITEMS,
+        description="Cantidad máxima de ítems a devolver (el feed trae ~10).",
+    )
+    categoria: str | None = Field(
+        None,
+        description=(
+            "Filtro opcional (cliente) por categoría del ítem, ej. "
+            "'Publicaciones Jurídicas' o 'Novedades editoriales'."
+        ),
+    )
+
+
+class ReferenciasNormaArgs(BaseModel):
+    tipo: Literal["ley", "decreto", "constitucion"] = Field(
+        ...,
+        description="Tipo de norma: 'ley', 'decreto' o 'constitucion'.",
+    )
+    anio: int = Field(
+        ...,
+        ge=1800,
+        le=2100,
+        description="Año de 4 dígitos (OBLIGATORIO completo, ej. 2008).",
+    )
+    numero: str | None = Field(
+        None,
+        description=(
+            "Número de la norma (ej. '18331'). Requerido para ley y decreto; "
+            "se ignora para constitucion."
+        ),
+    )
+    version: Literal["consolidada", "original"] = Field(
+        "consolidada",
+        description=(
+            "'consolidada' = texto actualizado (por defecto); 'original' = "
+            "texto tal como se publicó. 'original' sólo aplica a ley y decreto."
+        ),
     )

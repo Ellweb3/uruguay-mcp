@@ -54,3 +54,20 @@ def impo_buscar_normativa_guia(query: str = "") -> str:
         "si no, devuelve URLs canónicas de búsqueda. Cuando conozcas tipo, número y "
         "año, preferí impo_get_norma para datos estructurados."
     )
+
+
+@prompt(
+    name="impo_buscar_texto_guia",
+    module=MODULE,
+    description="Instrucción para hacer búsqueda full-text real en IMPO por tema.",
+)
+def impo_buscar_texto_guia(query: str = "") -> str:
+    return (
+        f"Buscá en el sitio de IMPO sobre '{query}' con la herramienta "
+        "impo_buscar_texto (parámetros query, pagina y max_resultados). Es una "
+        "búsqueda full-text real (feed RSS de WordPress) que devuelve titulo, url, "
+        "fecha, autor y categorias. Si el usuario quiere las últimas publicaciones "
+        "o anuncios de nuevas leyes, usá impo_novedades. Cuando identifiques una "
+        "norma puntual (tipo/número/año), pasá a impo_get_norma; y para ver qué "
+        "otras normas la referencian usá impo_referencias_norma."
+    )

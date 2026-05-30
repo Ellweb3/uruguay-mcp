@@ -11,8 +11,8 @@
 [![PyPI](https://img.shields.io/pypi/v/uruguay-mcp?color=blue&label=PyPI)](https://pypi.org/project/uruguay-mcp/)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 [![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-7C3AED)](https://modelcontextprotocol.io/)
-[![Tests](https://img.shields.io/badge/tests-129%20passing-brightgreen)](#desarrollo)
-[![Coverage](https://img.shields.io/badge/coverage-88%25-brightgreen)](#desarrollo)
+[![Tests](https://img.shields.io/badge/tests-204%20passing-brightgreen)](#desarrollo)
+[![Coverage](https://img.shields.io/badge/coverage-89%25-brightgreen)](#desarrollo)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 🌎 **Español** · **[English](README.md)**
@@ -24,8 +24,9 @@
 Un servidor [MCP](https://modelcontextprotocol.io/) que le da a los agentes de IA
 acceso estructurado a los **datos abiertos del Estado uruguayo** — el catálogo
 nacional de datos, el Banco Central, el Instituto Nacional de Estadística, los
-datos y el transporte en tiempo real de Montevideo, y el catálogo de servicios
-gub.uy — detrás de una única capa de **meta-descubrimiento**.
+datos y el transporte en tiempo real de Montevideo, datos espaciales (IDE),
+educación, salud, programas sociales, noticias de gobierno, y el catálogo de
+servicios gub.uy — detrás de una única capa de **meta-descubrimiento**.
 
 ## ✨ ¿Por qué una capa de meta-descubrimiento?
 
@@ -44,8 +45,8 @@ visible en el prompt se mantiene constante sin importar cuántas fuentes se agre
 
 Cada herramienta devuelve un sobre unificado: `{ "_meta": { source, cached, lang, timestamp }, "data": ... }`.
 
-> En resumen: **5 meta-herramientas + 49 herramientas de datos en 10 módulos**,
-> más **29 prompts** y **19 recursos**.
+> En resumen: **5 meta-herramientas + 71 herramientas de datos en 15 módulos**,
+> más **43 prompts** y **28 recursos**.
 
 ## 📚 Fuentes de datos (módulos)
 
@@ -61,6 +62,11 @@ Cada herramienta devuelve un sobre unificado: `{ "_meta": { source, cached, lang
 | ⚖️ | `impo` | IMPO — legislación, normativa y Diario Oficial | REST (JSON) | 3 |
 | 🌦️ | `inumet` | Instituto Uruguayo de Meteorología — estaciones, pronóstico y alertas | REST + HTML | 3 |
 | 🏛️ | `parlamento` | Parlamento del Uruguay — datasets, asistencias y actividades (vía CKAN) | CKAN REST | 4 |
+| 🗺️ | `ide` | IDE Uruguay (AGESIC) — datos espaciales: capas WFS, parcelas catastrales y geocodificación | WFS 2.0 + REST | 5 |
+| 🎓 | `educacion` | ANEP / educación — datasets y directorios de centros (CKAN nacional, org=anep) | CKAN REST | 3 |
+| 🏥 | `salud` | Salud (MSP / FNR) — datasets de salud, policlínicas y gasto en medicamentos | CKAN REST | 5 |
+| 🤝 | `mides` | MIDES — programas sociales y la *Guía de Recursos* de servicios | CKAN + HTML | 4 |
+| 📰 | `noticias` | Noticias de gobierno gub.uy — últimas publicaciones y búsqueda de texto | scraping HTML | 2 |
 
 La parte de transporte de `montevideo` requiere credenciales OAuth2
 (`URUGUAY_MCP_MVD_CLIENT_ID` / `URUGUAY_MCP_MVD_CLIENT_SECRET`); sin ellas, las
@@ -74,12 +80,14 @@ en español, parametrizadas) y **recursos** (documentos de referencia estáticos
 bajo el esquema de URI `uru://<módulo>/<ruta>`), expuestos de forma nativa a
 través de FastMCP.
 
-- **29 prompts** — p. ej. `bcu_cotizacion_dolar_hoy`, `catalogo_buscar_por_tema`,
+- **43 prompts** — p. ej. `bcu_cotizacion_dolar_hoy`, `catalogo_buscar_por_tema`,
   `ine_buscar_estudios`, `montevideo_proximo_bus`, `datastore_unir_dos_fuentes`,
-  `acce_analizar_compra`, `impo_consultar_norma`, `inumet_clima_actual`.
-- **19 recursos** — p. ej. `uru://bcu/codigos-moneda`,
+  `acce_analizar_compra`, `impo_consultar_norma`, `inumet_clima_actual`,
+  `ide_consultar_catastro`, `salud_consultar_medicamentos`, `noticias_ultimas`.
+- **28 recursos** — p. ej. `uru://bcu/codigos-moneda`,
   `uru://catalogodatos/guia-de-uso`, `uru://montevideo/credenciales-transporte`,
-  `uru://acce/glosario-ocds`, `uru://impo/esquema`, `uru://inumet/variables`.
+  `uru://acce/glosario-ocds`, `uru://impo/esquema`, `uru://inumet/variables`,
+  `uru://ide/capas-destacadas`, `uru://salud/fuentes`, `uru://mides/guia-recursos`.
 
 Mirá **[EXAMPLES.md](EXAMPLES.md)** para escenarios de uso de punta a punta,
 incluidos los que combinan fuentes mediante `plan_query` / `execute_batch` y
@@ -160,7 +168,8 @@ src/uruguay_mcp/
     ├── catalogodatos/   ├── bcu/          ├── ine/
     ├── gubuy/           ├── montevideo/   ├── datastore/
     ├── acce/            ├── impo/         ├── inumet/
-    └── parlamento/
+    ├── parlamento/      ├── ide/          ├── educacion/
+    ├── salud/           ├── mides/        └── noticias/
 ```
 
 Cada módulo es independiente (`constants` · `schemas` · `client` · `tools` ·
@@ -172,7 +181,7 @@ todo lo que ofrece.
 ```bash
 uv venv && uv pip install -e ".[dev]"
 
-uv run pytest                  # 129 tests unitarios (HTTP mockeado, offline) · 88% cobertura
+uv run pytest                  # 204 tests unitarios (HTTP mockeado, offline) · 89% cobertura
 uv run pytest -m integration   # consulta las APIs de gobierno reales
 uv run ruff check src tests
 uv run pyright

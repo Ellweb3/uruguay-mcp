@@ -13,9 +13,10 @@ Meta-tools:
 - `call_tool(name, arguments)` — ejecuta una tool por nombre.
 - `execute_batch(calls)` — ejecuta `[{name, arguments}, ...]` en paralelo.
 
-Módulos cargados por defecto: `catalogodatos`, `bcu`, `ine`, `gubuy`,
-`montevideo`, `datastore` (31 data tools). Los nombres de tools usados abajo son
-los reales registrados en cada módulo.
+Módulos cargados por defecto (15): `catalogodatos`, `bcu`, `ine`, `gubuy`,
+`montevideo`, `datastore`, `acce`, `impo`, `inumet`, `parlamento`, `ide`,
+`educacion`, `salud`, `mides`, `noticias` (71 data tools en total). Los nombres
+de tools usados abajo son los reales registrados en cada módulo.
 
 ---
 
@@ -351,6 +352,88 @@ atrás hasta el último valor no nulo (el viento viene en nudos, con conversión
 km/h). `inumet_alertas` e `inumet_pronostico` scrapean HTML y degradan a
 `status="partial"` si la página no parsea; `inumet_pronostico` da min/max y
 descripción por período.
+
+---
+
+## 16. Padrón catastral por departamento (ide)
+
+**Objetivo:** Ubicar una parcela catastral por departamento y número de padrón
+sobre la IDE Uruguay (datos espaciales de AGESIC), sin autenticación.
+
+```text
+discover_tools(query="parcela catastral por padrón y departamento", module="ide")
+  -> ide_parcela_catastral, ide_geocodificar, ide_features
+
+# La capa urbana tiene ~1M parcelas: hay que acotar SÍ o SÍ
+call_tool("ide_parcela_catastral", {
+  "tipo": "urbano",
+  "departamento": "MONTEVIDEO",
+  "padron": 1234,
+  "slim": true
+})
+  -> GeoJSON recortado: tipo de geometría + bbox + centroide (sin el array
+     completo de coordenadas)
+```
+
+`ide_parcela_catastral` **exige** acotar la consulta: `departamento`+`padron`,
+o `bbox`, o `cql_filter` (si no, devuelve `validation_error`). El nombre del
+departamento va en MAYÚSCULAS. Con `slim=true` (por defecto) la geometría se
+recorta a tipo + bbox + centroide; usá `slim=false` para las coordenadas
+completas. Para resolver una dirección a lat/lng usá `ide_geocodificar`
+(`{"direccion": "AVENIDA 18 DE JULIO 1234, MONTEVIDEO"}`).
+
+---
+
+## 17. Buscar datos de salud y gasto en medicamentos (salud)
+
+**Objetivo:** Explorar datasets de salud (MSP / FNR) y consultar el gasto en
+tratamientos con medicamentos del Fondo Nacional de Recursos.
+
+```text
+discover_tools(query="datos de salud y gasto en medicamentos", module="salud")
+  -> salud_buscar, salud_get_dataset, salud_medicamentos
+
+# Búsqueda dentro del grupo salud del catálogo nacional
+call_tool("salud_buscar", { "q": "egresos hospitalarios", "rows": 10 })
+  -> elegir un dataset y, si hace falta, abrirlo con salud_get_dataset
+
+# Gasto del FNR en tratamientos con medicamentos, agregado por área
+call_tool("salud_medicamentos", { "anio": 2022, "area": "Cardiología", "limit": 50 })
+```
+
+`salud_buscar` fuerza `groups:salud` (y acepta `org` solo entre `'msp'` o
+`'fondo-nacional-de-recursos'`). No existe un dataset de "Formulario
+Terapéutico de Medicamentos" en el catálogo: `salud_medicamentos` apunta al
+dataset de gasto del FNR, filtrando por `anio` (`Anio`) y `area`
+(`Area_prestacion`); para agregaciones podés pasar un `sql` SELECT de solo
+lectura.
+
+---
+
+## 18. Últimas noticias de gobierno y búsqueda por tema (noticias)
+
+**Objetivo:** Traer las últimas noticias publicadas por un organismo en gub.uy
+y luego buscar noticias sobre un tema puntual.
+
+```text
+discover_tools(query="últimas noticias del gobierno gub.uy", module="noticias")
+  -> noticias_recientes, noticias_buscar
+
+# Últimas noticias de un subsitio (no hay feed RSS/JSON: se parsea el HTML)
+call_tool("noticias_recientes", { "subsite": "ministerio-salud-publica", "limit": 10 })
+  -> [{ titulo, categoria, fecha (ISO YYYY-MM-DD), url, resumen }]
+
+# Búsqueda de texto completo sobre noticias de gub.uy
+call_tool("noticias_buscar", { "query": "vacunación", "limit": 10 })
+  -> [{ titulo, url, resumen }]  (status="partial": fragmentos del buscador)
+```
+
+`noticias_recientes` pagina las tarjetas del listado y normaliza la fecha a ISO
+(maneja "29 de Setiembre, 2026" y "29/05/2026"); devuelve `status="ok"`.
+`noticias_buscar` usa el campo `search_api_fulltext` y filtra a URLs de noticias,
+pero es `status="partial"`: los snippets vienen sin fecha/categoría y pueden
+abarcar varios subsitios. Como gub.uy no expone un feed legible por máquina,
+ambas tools incluyen una `nota` al respecto.
 
 ---
 

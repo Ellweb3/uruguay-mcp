@@ -18,6 +18,11 @@ ALL_MODULES = [
     "impo",
     "inumet",
     "parlamento",
+    "ide",
+    "educacion",
+    "salud",
+    "mides",
+    "noticias",
 ]
 
 

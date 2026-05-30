@@ -35,3 +35,15 @@ DIARIO_SECCIONES = ("indice", "documentos", "avisos", "um")
 
 # Recorte de la cantidad de artículos devueltos para no inflar la respuesta.
 MAX_ARTICULOS = 100
+
+# --- Feeds RSS de WordPress (UTF-8, NO latin-1 como las bases ?json=true) ---
+# Búsqueda full-text del sitio: /?s={query}&feed=rss2&paged={n} (10 ítems/página).
+SEARCH_FEED_URL = f"{BASE_URL}/?s={{query}}&feed=rss2&paged={{paged}}"
+# Feed de novedades/noticias editoriales del sitio.
+NEWS_FEED_URL = f"{BASE_URL}/feed/"
+
+# Namespace de Dublin Core usado por <dc:creator> en los feeds de WordPress.
+DC_NS = "http://purl.org/dc/elements/1.1/"
+
+# Recorte de la cantidad de ítems devueltos por los feeds RSS.
+MAX_FEED_ITEMS = 10
