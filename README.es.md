@@ -11,7 +11,8 @@
 [![PyPI](https://img.shields.io/pypi/v/uruguay-mcp?color=blue&label=PyPI)](https://pypi.org/project/uruguay-mcp/)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 [![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-7C3AED)](https://modelcontextprotocol.io/)
-[![Tests](https://img.shields.io/badge/tests-204%20passing-brightgreen)](#desarrollo)
+[![CI](https://github.com/Ellweb3/uruguay-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Ellweb3/uruguay-mcp/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-225%20passing-brightgreen)](#desarrollo)
 [![Coverage](https://img.shields.io/badge/coverage-89%25-brightgreen)](#desarrollo)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
@@ -45,8 +46,8 @@ visible en el prompt se mantiene constante sin importar cuántas fuentes se agre
 
 Cada herramienta devuelve un sobre unificado: `{ "_meta": { source, cached, lang, timestamp }, "data": ... }`.
 
-> En resumen: **5 meta-herramientas + 71 herramientas de datos en 15 módulos**,
-> más **43 prompts** y **28 recursos**.
+> En resumen: **5 meta-herramientas + 75 herramientas de datos en 15 módulos**,
+> más **50 prompts** y **32 recursos**.
 
 ## 📚 Fuentes de datos (módulos)
 
@@ -54,12 +55,12 @@ Cada herramienta devuelve un sobre unificado: `{ "_meta": { source, cached, lang
 |---|---|---|---|:--:|
 | 🏛️ | `catalogodatos` | [catalogodatos.gub.uy](https://catalogodatos.gub.uy) — catálogo nacional CKAN (~2680 datasets, 72 organismos) + SQL sobre DataStore | CKAN REST | 9 |
 | 💵 | `bcu` | Banco Central del Uruguay — cotizaciones | SOAP (`zeep`) | 4 |
-| 📊 | `ine` | Instituto Nacional de Estadística — ANDA / microdatos | REST | 3 |
+| 📊 | `ine` | Instituto Nacional de Estadística — estudios ANDA + consultas al DataStore (CKAN nacional) | REST | 7 |
 | 🌐 | `gubuy` | gub.uy — catálogo de servicios y APIs del Estado | CKAN REST | 4 |
 | 🚌 | `montevideo` | Intendencia de Montevideo — CKAN municipal + transporte en tiempo real | CKAN + REST | 11 |
 | 🗄️ | `datastore` | Espacio SQLite multi-fuente — cargar datos CSV/CKAN y correr SQL de solo lectura (JOINs entre fuentes) | SQLite local | 4 |
 | 🛒 | `acce` | Agencia de Compras y Contrataciones del Estado — compras públicas (OCDS) | OCDS REST/RSS + CKAN | 4 |
-| ⚖️ | `impo` | IMPO — legislación, normativa y Diario Oficial | REST (JSON) | 3 |
+| ⚖️ | `impo` | IMPO — legislación, normativa y Diario Oficial | REST (JSON) | 6 |
 | 🌦️ | `inumet` | Instituto Uruguayo de Meteorología — estaciones, pronóstico y alertas | REST + HTML | 3 |
 | 🏛️ | `parlamento` | Parlamento del Uruguay — datasets, asistencias y actividades (vía CKAN) | CKAN REST | 4 |
 | 🗺️ | `ide` | IDE Uruguay (AGESIC) — datos espaciales: capas WFS, parcelas catastrales y geocodificación | WFS 2.0 + REST | 5 |
@@ -80,11 +81,11 @@ en español, parametrizadas) y **recursos** (documentos de referencia estáticos
 bajo el esquema de URI `uru://<módulo>/<ruta>`), expuestos de forma nativa a
 través de FastMCP.
 
-- **43 prompts** — p. ej. `bcu_cotizacion_dolar_hoy`, `catalogo_buscar_por_tema`,
+- **50 prompts** — p. ej. `bcu_cotizacion_dolar_hoy`, `catalogo_buscar_por_tema`,
   `ine_buscar_estudios`, `montevideo_proximo_bus`, `datastore_unir_dos_fuentes`,
   `acce_analizar_compra`, `impo_consultar_norma`, `inumet_clima_actual`,
   `ide_consultar_catastro`, `salud_consultar_medicamentos`, `noticias_ultimas`.
-- **28 recursos** — p. ej. `uru://bcu/codigos-moneda`,
+- **32 recursos** — p. ej. `uru://bcu/codigos-moneda`,
   `uru://catalogodatos/guia-de-uso`, `uru://montevideo/credenciales-transporte`,
   `uru://acce/glosario-ocds`, `uru://impo/esquema`, `uru://inumet/variables`,
   `uru://ide/capas-destacadas`, `uru://salud/fuentes`, `uru://mides/guia-recursos`.
@@ -181,7 +182,7 @@ todo lo que ofrece.
 ```bash
 uv venv && uv pip install -e ".[dev]"
 
-uv run pytest                  # 204 tests unitarios (HTTP mockeado, offline) · 89% cobertura
+uv run pytest                  # 225 tests unitarios (HTTP mockeado, offline) · 89% cobertura
 uv run pytest -m integration   # consulta las APIs de gobierno reales
 uv run ruff check src tests
 uv run pyright

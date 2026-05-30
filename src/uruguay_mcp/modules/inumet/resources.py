@@ -64,3 +64,39 @@ def variables() -> str:
         "Brasil, SMN Aeroparque de Argentina, Antártida). Usá `gerencia` o "
         "`lat`/`lon` para filtrar a Uruguay si lo necesitás.\n"
     )
+
+
+@resource(
+    uri="uru://inumet/niveles-alerta",
+    name="Niveles de alerta meteorológica de INUMET",
+    description="Significado de los niveles de advertencia amarilla/naranja/roja de INUMET.",
+    module=MODULE,
+    mime_type="text/markdown",
+)
+def niveles_alerta() -> str:
+    return (
+        "# Niveles de alerta meteorológica de INUMET\n\n"
+        "Las alertas se obtienen con `inumet_alertas` (campo `nivel`). "
+        "El pronóstico de fondo se puede consultar con `inumet_pronostico`.\n\n"
+        "## Niveles\n\n"
+        "- **Amarilla** — Fenómeno meteorológico significativo previsto. "
+        "Condiciones que pueden causar inconvenientes menores; se recomienda "
+        "estar atento y seguir la evolución.\n"
+        "- **Naranja** — Fenómeno meteorológico importante. Condiciones que "
+        "pueden causar daños materiales, interrupciones en servicios y situaciones "
+        "de riesgo para personas; se recomienda tomar precauciones.\n"
+        "- **Roja** — Fenómeno meteorológico extremo. Condiciones de alto riesgo "
+        "para la vida y la infraestructura; se recomienda no exponerse y seguir "
+        "las indicaciones de Defensa Civil.\n\n"
+        "## Cómo consultarlas\n\n"
+        "1. Usá `inumet_alertas` para ver si hay advertencia activa, su nivel y "
+        "el texto oficial (y el PDF si está disponible).\n"
+        "2. Complementá con `inumet_pronostico` para conocer la evolución del "
+        "tiempo en los próximos días.\n\n"
+        "## Notas técnicas\n\n"
+        "- INUMET no publica las alertas como API JSON; se obtienen scrapeando "
+        "la página `/alerta`. Si la estructura HTML cambia, la respuesta degrada "
+        "a `status: 'partial'`.\n"
+        "- Cuando no hay advertencia vigente, `activa` es `false` y `nivel` es "
+        "`null`.\n"
+    )

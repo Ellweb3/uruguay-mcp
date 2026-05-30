@@ -247,3 +247,28 @@ def test_module_resources_registered():
         "uru://inumet/guia-de-uso",
         "uru://inumet/variables",
     } <= uris
+
+
+def test_inumet_new_prompt_registered():
+    names = {p.name for p in registry.prompts() if p.module == "inumet"}
+    assert "inumet_comparar_estaciones" in names
+
+
+def test_inumet_new_resource_registered():
+    uris = {r.uri for r in registry.resources() if r.module == "inumet"}
+    assert "uru://inumet/niveles-alerta" in uris
+
+
+def test_inumet_comparar_estaciones_handler_references_tools():
+    by_name = {p.name: p for p in registry.prompts()}
+    text = by_name["inumet_comparar_estaciones"].handler(estaciones="Artigas, Rivera")
+    assert isinstance(text, str)
+    assert "inumet_estaciones" in text
+
+
+def test_inumet_niveles_alerta_resource_handler():
+    by_uri = {r.uri: r for r in registry.resources()}
+    text = by_uri["uru://inumet/niveles-alerta"].handler()
+    assert isinstance(text, str)
+    assert "inumet_alertas" in text
+    assert "inumet_pronostico" in text

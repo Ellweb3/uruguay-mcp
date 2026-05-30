@@ -9,7 +9,9 @@ import respx
 import uruguay_mcp.modules.datastore  # noqa: F401
 from uruguay_mcp.meta import tools as meta
 from uruguay_mcp.modules.datastore import client
+from uruguay_mcp.modules.datastore.constants import MODULE
 from uruguay_mcp.shared import cache, http
+from uruguay_mcp.shared.registry import registry
 
 CSV_URL = "https://example.org/data/poblacion.csv"
 CKAN_BASE = "https://catalogodatos.gub.uy"
@@ -136,3 +138,38 @@ async def test_load_ckan_resource_and_join():
         ["Canelones", "520187", "500"],
         ["Montevideo", "1319108", "1000"],
     ]
+
+
+def test_datastore_new_prompts_registered():
+    names = {p.name for p in registry.prompts() if p.module == MODULE}
+    assert {"datastore_cargar_ckan", "datastore_agregar_por_columna"} <= names
+
+
+def test_datastore_new_resource_registered():
+    uris = {r.uri for r in registry.resources() if r.module == MODULE}
+    assert "uru://datastore/recetas-sql" in uris
+
+
+def test_datastore_cargar_ckan_handler_references_tools():
+    by_name = {p.name: p for p in registry.prompts()}
+    text = by_name["datastore_cargar_ckan"].handler(resource_id="abc-123", tabla="mi_tabla")
+    assert isinstance(text, str)
+    assert "datastore_load_ckan_resource" in text
+    assert "datastore_list_tables" in text
+    assert "datastore_sql" in text
+
+
+def test_datastore_agregar_por_columna_handler_references_tools():
+    by_name = {p.name: p for p in registry.prompts()}
+    text = by_name["datastore_agregar_por_columna"].handler(tabla="centros", columna="depto")
+    assert isinstance(text, str)
+    assert "datastore_sql" in text
+    assert "datastore_list_tables" in text
+
+
+def test_datastore_recetas_sql_resource_handler():
+    by_uri = {r.uri: r for r in registry.resources()}
+    text = by_uri["uru://datastore/recetas-sql"].handler()
+    assert isinstance(text, str)
+    assert "datastore_sql" in text
+    assert "datastore_list_tables" in text

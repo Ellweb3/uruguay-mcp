@@ -66,3 +66,44 @@ def ine_datos_catalogo_nacional(tema: str = "precios") -> str:
         "(nombre, formato y URL). Usá esta vía cuando se necesiten archivos "
         "tabulares (CSV/Excel) que no están en el catálogo ANDA."
     )
+
+
+@prompt(
+    name="ine_consultar_serie_datos",
+    module=MODULE,
+    description=(
+        "Genera una instrucción para descubrir un recurso del INE con DataStore "
+        "activo y consultar sus filas (flujo descubrir-luego-consultar, sin ids "
+        "hardcodeados)."
+    ),
+)
+def ine_consultar_serie_datos(tema: str = "precios", filas: int = 20) -> str:
+    return (
+        f"Necesito datos consultables del INE sobre '{tema}'. Paso 1: usá "
+        "ine_find_data_resources con theme='" + tema + "' para descubrir recursos "
+        "con DataStore activo y anotá el resource_id (id) del recurso más relevante. "
+        "Paso 2 (opcional): usá ine_datastore_fields con ese resource_id para ver el "
+        "esquema de columnas. Paso 3: usá ine_datastore_query con ese resource_id y "
+        f"limit={filas} para traer las filas; reportá total, columnas y una muestra "
+        "de registros. No inventes resource_id: siempre descubrilo primero con "
+        "ine_find_data_resources."
+    )
+
+
+@prompt(
+    name="ine_explorar_recursos_dataset",
+    module=MODULE,
+    description=(
+        "Genera una instrucción para inspeccionar los recursos de un dataset del "
+        "INE e identificar cuáles son consultables vía DataStore."
+    ),
+)
+def ine_explorar_recursos_dataset(dataset_name: str = "ine-precios") -> str:
+    return (
+        f"Inspeccioná el dataset del INE '{dataset_name}' con la herramienta "
+        "ine_dataset_resources. Listá todos sus recursos indicando formato y si "
+        "tienen DataStore activo. Para los recursos consultables "
+        "(queryable_resources) sugerí consultarlos con ine_datastore_query; para los "
+        "que solo se descargan, indicá la URL del archivo. Si no conocés el "
+        "dataset_name, buscalo primero con ine_list_ckan_datasets."
+    )

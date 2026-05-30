@@ -34,6 +34,44 @@ async def search_studies(params: dict[str, Any]) -> tuple[Any, bool, str]:
     return value, cached_flag, url
 
 
+async def ckan_package_show(name: str) -> tuple[Any, bool, str]:
+    """Call CKAN package_show for a dataset name/id and unwrap its result."""
+    url = f"{CKAN_ACTION_URL}/package_show"
+    key = f"ckan:ine:package_show:{name}"
+
+    async def producer() -> Any:
+        payload = await http.get_json(url, api=CKAN_API_NAME, params={"id": name})
+        if not isinstance(payload, dict) or not payload.get("success"):
+            detail = (payload or {}).get("error", "dataset no encontrado")
+            raise errors.upstream(CKAN_API_NAME, str(detail))
+        return payload["result"]
+
+    value, cached_flag = await cache.get_or_set(key, producer)
+    return value, cached_flag, url
+
+
+async def ckan_datastore_search(params: dict[str, Any]) -> tuple[Any, bool, str]:
+    """Call CKAN datastore_search and unwrap its result.
+
+    Raises an upstream error on CKAN error envelopes (success==false), which is
+    what comes back when the resource_id is unknown or not DataStore-backed.
+    """
+    url = f"{CKAN_ACTION_URL}/datastore_search"
+    key = "ckan:ine:datastore_search:" + "&".join(
+        f"{k}={v}" for k, v in sorted(params.items())
+    )
+
+    async def producer() -> Any:
+        payload = await http.get_json(url, api=CKAN_API_NAME, params=params)
+        if not isinstance(payload, dict) or not payload.get("success"):
+            detail = (payload or {}).get("error", "recurso sin DataStore o inexistente")
+            raise errors.upstream(CKAN_API_NAME, str(detail))
+        return payload["result"]
+
+    value, cached_flag = await cache.get_or_set(key, producer)
+    return value, cached_flag, url
+
+
 async def get_study(idno: str) -> tuple[Any, bool, str]:
     """Call ANDA catalog/{idno} and return its ``dataset`` block (cached)."""
     url = f"{ANDA_CATALOG_URL}/{idno}"

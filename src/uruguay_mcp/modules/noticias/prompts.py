@@ -40,3 +40,22 @@ def noticias_buscar_tema(tema: str, subsite: str | None = None) -> str:
         "artículo) y no traen fecha ni categoría. Para el contexto reciente de un "
         "organismo, complementá con noticias_recientes."
     )
+
+
+@prompt(
+    name="noticias_monitorear_tema",
+    module=MODULE,
+    description="Instrucción para monitorear la cobertura de un tema en las noticias de gobierno.",
+)
+def noticias_monitorear_tema(tema: str, subsite: str = DEFAULT_SUBSITE) -> str:
+    return (
+        f"Monitorea la cobertura del tema '{tema}' en las noticias de gobierno. "
+        f"Primero buscá ocurrencias con noticias_buscar (parámetro query='{tema}') "
+        "para obtener resultados del buscador de gub.uy. "
+        f"Luego listá las noticias más recientes del subsitio '{subsite}' con "
+        "noticias_recientes y filtrá manualmente las que mencionen el tema en "
+        "título o resumen. Presentá un resumen de cobertura: cuántas noticias "
+        "encontraste, las fechas más recientes y los titulares más relevantes. "
+        "Aclaralo: noticias_buscar es parcial (no devuelve fechas ni categorías) "
+        "y noticias_recientes extrae datos del HTML (sin el artículo completo)."
+    )

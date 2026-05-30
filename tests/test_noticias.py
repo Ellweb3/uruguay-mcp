@@ -216,3 +216,16 @@ def test_prompt_text_references_real_tools():
     by_name = {p.name: p for p in registry.prompts()}
     assert "noticias_recientes" in by_name["noticias_ultimas"].handler()
     assert "noticias_buscar" in by_name["noticias_buscar_tema"].handler(tema="salud")
+
+
+def test_noticias_new_prompt_registered():
+    names = {p.name for p in registry.prompts() if p.module == "noticias"}
+    assert "noticias_monitorear_tema" in names
+
+
+def test_noticias_monitorear_tema_handler_references_tools():
+    by_name = {p.name: p for p in registry.prompts()}
+    text = by_name["noticias_monitorear_tema"].handler(tema="salud")
+    assert isinstance(text, str)
+    assert "noticias_buscar" in text
+    assert "noticias_recientes" in text

@@ -43,3 +43,33 @@ def guia_de_uso() -> str:
         "(una por oferta); deduplicá por 'Ruee Calculado' o 'Nombre' si "
         "necesitás un registro por centro.\n"
     )
+
+
+@resource(
+    uri="uru://educacion/subsistemas",
+    name="Subsistemas educativos de ANEP",
+    description="Códigos de subsistema y cuáles tienen datastore consultable en educacion_centros.",
+    module=MODULE,
+    mime_type="text/markdown",
+)
+def subsistemas() -> str:
+    return (
+        "# Subsistemas educativos de ANEP\n\n"
+        "Códigos para usar con el parámetro `subsistema` de `educacion_centros`.\n\n"
+        "## Con datastore consultable (búsqueda directa)\n\n"
+        "- `ces` — Secundaria / DGES (Consejo de Educación Secundaria). "
+        "Es el subsistema por defecto cuando no se indica ninguno.\n"
+        "- `cfe` — Formación docente / CFE (Consejo de Formación en Educación).\n"
+        "- `789` — 7°, 8° y 9° grado en escuelas rurales (tabla pequeña, ~55 filas).\n\n"
+        "## Solo descarga (sin datastore)\n\n"
+        "Para estos dos, `educacion_centros` devuelve la URL del XLSX en lugar de "
+        "filas, porque no tienen datastore activo en el portal CKAN:\n\n"
+        "- `ceip` — Primaria / CEIP (Consejo de Educación Inicial y Primaria).\n"
+        "- `cetp` — UTU / CETP (Consejo de Educación Técnico-Profesional).\n\n"
+        "## Cómo explorar la oferta\n\n"
+        "Usá `educacion_centros` con el parámetro `subsistema` para filtrar por "
+        "sistema educativo, y combinalo con `departamento` o `localidad` para "
+        "acotar geográficamente. Para ver todos los recursos disponibles del "
+        "dataset usá `educacion_get_dataset` con el id "
+        "`anep-http-sig-anep-edu-uy-siganep-formatos`.\n"
+    )

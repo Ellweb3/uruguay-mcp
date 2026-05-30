@@ -66,3 +66,39 @@ def idno_convencion() -> str:
         "`idno` (string), **no** el `id` numérico. Obtené el `idno` desde los "
         "resultados de `ine_search_studies`.\n"
     )
+
+
+@resource(
+    uri="uru://ine/datastore-flujo",
+    name="Flujo DataStore del INE (descubrir y consultar)",
+    description=(
+        "Explica cómo descubrir recursos consultables del INE en CKAN y consultar "
+        "sus filas sin hardcodear ids."
+    ),
+    module=MODULE,
+    mime_type="text/markdown",
+)
+def datastore_flujo() -> str:
+    return (
+        "# Consultar datos del INE vía CKAN DataStore\n\n"
+        "Algunos recursos del INE en el Catálogo Nacional (CKAN, "
+        "organization=ine) tienen **DataStore activo**, lo que permite consultarlos "
+        "por filas sin descargar el archivo completo. Los `resource_id` pueden "
+        "rotar, así que **siempre se descubren en tiempo de ejecución** — nunca se "
+        "hardcodean.\n\n"
+        "## Flujo recomendado\n\n"
+        "1. `ine_find_data_resources` — pasá un `theme` (p.ej. 'precios', "
+        "'empleo'); devuelve SOLO los recursos con `datastore_active=true`, con su "
+        "`id`, `name`, `format` y el dataset al que pertenecen.\n"
+        "2. `ine_datastore_fields` — pasá el `resource_id` para ver el esquema de "
+        "columnas (id y tipo) de forma barata, antes de traer filas.\n"
+        "3. `ine_datastore_query` — pasá el `resource_id` (más `limit`, `offset` o "
+        "`q`) para obtener `fields`, `total` y `records`.\n\n"
+        "## Detalle de un dataset\n\n"
+        "`ine_dataset_resources` recibe el `dataset_name` (slug) y lista todos sus "
+        "recursos, marcando cuáles son consultables (`queryable_resources`) y "
+        "cuáles solo se descargan.\n\n"
+        "## Nota\n\n"
+        "Si un recurso no está en el DataStore, `ine_datastore_query` devolverá un "
+        "error claro: usá `ine_find_data_resources` para localizar uno consultable.\n"
+    )

@@ -277,3 +277,28 @@ def test_prompt_text_references_real_tools():
     assert "educacion_get_dataset" in text
     text2 = by_name["educacion_centros_por_departamento"].handler()
     assert "educacion_centros" in text2
+
+
+def test_educacion_new_prompt_registered():
+    names = {p.name for p in registry.prompts() if p.module == "educacion"}
+    assert "educacion_oferta_por_subsistema" in names
+
+
+def test_educacion_new_resource_registered():
+    uris = {r.uri for r in registry.resources() if r.module == "educacion"}
+    assert "uru://educacion/subsistemas" in uris
+
+
+def test_educacion_oferta_por_subsistema_handler_references_tools():
+    by_name = {p.name: p for p in registry.prompts()}
+    text = by_name["educacion_oferta_por_subsistema"].handler(subsistema="cfe")
+    assert isinstance(text, str)
+    assert "educacion_get_dataset" in text
+    assert "educacion_centros" in text
+
+
+def test_educacion_subsistemas_resource_handler():
+    by_uri = {r.uri: r for r in registry.resources()}
+    text = by_uri["uru://educacion/subsistemas"].handler()
+    assert isinstance(text, str)
+    assert "educacion_centros" in text

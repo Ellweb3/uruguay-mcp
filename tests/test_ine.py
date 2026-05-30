@@ -173,12 +173,218 @@ async def test_list_ckan_datasets():
     assert "organization%3Aine" in str(request.url) or "organization:ine" in str(request.url)
 
 
+@respx.mock
+async def test_find_data_resources_keeps_only_datastore_active():
+    payload = {
+        "success": True,
+        "result": {
+            "count": 2,
+            "results": [
+                {
+                    "name": "ine-precios",
+                    "title": "Índice de Precios",
+                    "resources": [
+                        {
+                            "id": "r-active",
+                            "name": "serie",
+                            "format": "CSV",
+                            "datastore_active": True,
+                            "url": "http://x/r-active.csv",
+                        },
+                        {
+                            "id": "r-file",
+                            "name": "pdf",
+                            "format": "PDF",
+                            "datastore_active": False,
+                            "url": "http://x/r-file.pdf",
+                        },
+                    ],
+                },
+                {
+                    "name": "ine-sin-datastore",
+                    "title": "Solo descargas",
+                    "resources": [
+                        {
+                            "id": "r-none",
+                            "name": "xls",
+                            "format": "XLSX",
+                            "datastore_active": False,
+                            "url": "http://x/r-none.xlsx",
+                        }
+                    ],
+                },
+            ],
+        },
+    }
+    route = respx.get(f"{CKAN_ACTION_URL}/package_search").mock(
+        return_value=httpx.Response(200, json=payload)
+    )
+
+    out = await meta.call_tool("ine_find_data_resources", {"theme": "precios", "rows": 5})
+
+    assert route.called
+    assert out["_meta"]["source"]["api"] == "catalogodatos.gub.uy"
+    body = out["data"]
+    assert body["count"] == 2
+    # Only the dataset with a datastore-active resource survives.
+    assert body["datasets_with_data"] == 1
+    assert body["active_resources"] == 1
+    ds = body["results"][0]
+    assert ds["dataset_name"] == "ine-precios"
+    assert [r["id"] for r in ds["resources"]] == ["r-active"]
+    assert ds["resources"][0]["datastore_active"] is True
+    # Request was scoped to organization:ine.
+    request = route.calls.last.request
+    assert "organization%3Aine" in str(request.url) or "organization:ine" in str(request.url)
+
+
+@respx.mock
+async def test_datastore_query_slims_fields_and_records():
+    payload = {
+        "success": True,
+        "result": {
+            "resource_id": "r-active",
+            "fields": [
+                {"id": "_id", "type": "int"},
+                {"id": "mes", "type": "text"},
+                {"id": "valor", "type": "numeric"},
+            ],
+            "total": 3,
+            "records": [
+                {"_id": 1, "mes": "2026-01", "valor": "100.0"},
+                {"_id": 2, "mes": "2026-02", "valor": "100.5"},
+            ],
+        },
+    }
+    route = respx.get(f"{CKAN_ACTION_URL}/datastore_search").mock(
+        return_value=httpx.Response(200, json=payload)
+    )
+
+    out = await meta.call_tool(
+        "ine_datastore_query", {"resource_id": "r-active", "limit": 2, "q": "2026"}
+    )
+
+    assert route.called
+    assert out["_meta"]["source"]["api"] == "catalogodatos.gub.uy"
+    body = out["data"]
+    assert body["resource_id"] == "r-active"
+    assert body["total"] == 3
+    assert body["limit"] == 2
+    assert {"id": "valor", "type": "numeric"} in body["fields"]
+    assert body["records"][0]["mes"] == "2026-01"
+    request = route.calls.last.request
+    assert "resource_id=r-active" in str(request.url)
+    assert "limit=2" in str(request.url)
+
+
+@respx.mock
+async def test_datastore_query_error_envelope_becomes_upstream_error():
+    payload = {"success": False, "error": {"message": "Not found: resource_id"}}
+    respx.get(f"{CKAN_ACTION_URL}/datastore_search").mock(
+        return_value=httpx.Response(404, json=payload)
+    )
+
+    out = await meta.call_tool("ine_datastore_query", {"resource_id": "missing"})
+    assert out["error"]["code"] == "upstream_error"
+
+
+@respx.mock
+async def test_datastore_fields_uses_limit_zero():
+    payload = {
+        "success": True,
+        "result": {
+            "resource_id": "r-active",
+            "fields": [
+                {"id": "_id", "type": "int"},
+                {"id": "valor", "type": "numeric"},
+            ],
+            "total": 99,
+            "records": [],
+        },
+    }
+    route = respx.get(f"{CKAN_ACTION_URL}/datastore_search").mock(
+        return_value=httpx.Response(200, json=payload)
+    )
+
+    out = await meta.call_tool("ine_datastore_fields", {"resource_id": "r-active"})
+
+    assert route.called
+    body = out["data"]
+    assert body["total"] == 99
+    assert body["fields"] == [
+        {"id": "_id", "type": "int"},
+        {"id": "valor", "type": "numeric"},
+    ]
+    # Schema-only fetch must request zero rows.
+    request = route.calls.last.request
+    assert "limit=0" in str(request.url)
+
+
+@respx.mock
+async def test_dataset_resources_flags_queryable():
+    payload = {
+        "success": True,
+        "result": {
+            "id": "abc",
+            "name": "ine-precios",
+            "title": "Índice de Precios",
+            "notes": "desc",
+            "organization": {"title": "INE"},
+            "num_resources": 2,
+            "resources": [
+                {
+                    "id": "r-active",
+                    "name": "serie",
+                    "format": "CSV",
+                    "datastore_active": True,
+                    "url": "http://x/r-active.csv",
+                },
+                {
+                    "id": "r-file",
+                    "name": "pdf",
+                    "format": "PDF",
+                    "datastore_active": False,
+                    "url": "http://x/r-file.pdf",
+                },
+            ],
+        },
+    }
+    route = respx.get(f"{CKAN_ACTION_URL}/package_show").mock(
+        return_value=httpx.Response(200, json=payload)
+    )
+
+    out = await meta.call_tool("ine_dataset_resources", {"dataset_name": "ine-precios"})
+
+    assert route.called
+    assert out["_meta"]["source"]["api"] == "catalogodatos.gub.uy"
+    body = out["data"]
+    assert body["name"] == "ine-precios"
+    assert body["organization"] == "INE"
+    assert body["queryable_resources"] == ["r-active"]
+    assert len(body["resources"]) == 2
+    request = route.calls.last.request
+    assert "id=ine-precios" in str(request.url)
+
+
+@respx.mock
+async def test_dataset_resources_not_found_becomes_error():
+    payload = {"success": False, "error": {"message": "Not found"}}
+    respx.get(f"{CKAN_ACTION_URL}/package_show").mock(
+        return_value=httpx.Response(404, json=payload)
+    )
+
+    out = await meta.call_tool("ine_dataset_resources", {"dataset_name": "nope"})
+    assert out["error"]["code"] == "upstream_error"
+
+
 def test_ine_prompts_registered():
     by_name = {p.name: p for p in registry.prompts()}
     expected = {
         "ine_buscar_estudios",
         "ine_metadatos_estudio",
         "ine_datos_catalogo_nacional",
+        "ine_consultar_serie_datos",
+        "ine_explorar_recursos_dataset",
     }
     assert expected <= set(by_name)
     for name in expected:

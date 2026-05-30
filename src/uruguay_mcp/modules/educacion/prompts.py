@@ -51,3 +51,24 @@ def educacion_centros_por_departamento(
         "disponibles y una muestra de centros con su nombre, dirección, "
         "teléfono y matrícula cuando exista."
     )
+
+
+@prompt(
+    name="educacion_oferta_por_subsistema",
+    module=MODULE,
+    description="Instrucción para explorar la oferta educativa de ANEP según subsistema.",
+)
+def educacion_oferta_por_subsistema(subsistema: str = "ces") -> str:
+    return (
+        f"Explorá la oferta educativa del subsistema '{subsistema}' de ANEP. "
+        "Primero obtenés el detalle del dataset con educacion_get_dataset "
+        "(id 'anep-http-sig-anep-edu-uy-siganep-formatos') para ver qué recursos "
+        "tienen datastore activo. "
+        "Los subsistemas consultables directamente con educacion_centros son: "
+        "'ces' (Secundaria/DGES), 'cfe' (Formación docente) y '789' (7°/8°/9° rural). "
+        "Para 'ceip' (Primaria) y 'cetp' (UTU) no hay datastore: educacion_centros "
+        "devolverá la URL de descarga del XLSX en lugar de filas. "
+        f"Consultá los centros de '{subsistema}' con educacion_centros "
+        "(parámetro subsistema) y mostrá los campos disponibles junto con una "
+        "muestra representativa."
+    )

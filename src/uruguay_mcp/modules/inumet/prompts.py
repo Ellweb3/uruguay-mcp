@@ -36,3 +36,21 @@ def inumet_resumen_tiempo(dias: int = 4) -> str:
         "(amarilla/naranja/roja) y zonas afectadas si está activa. Cerrá con una "
         "recomendación breve para la población."
     )
+
+
+@prompt(
+    name="inumet_comparar_estaciones",
+    module=MODULE,
+    description="Instrucción para comparar temperatura, viento y humedad entre estaciones EMA.",
+)
+def inumet_comparar_estaciones(estaciones: str = "Montevideo, Salto") -> str:
+    return (
+        f"Comparás las condiciones meteorológicas actuales entre las estaciones: "
+        f"{estaciones}. Para cada una usá inumet_estaciones (parámetro station con "
+        "el nombre de la localidad o la estación más cercana) y recopilá: "
+        "temperatura (temp_c), humedad relativa (hum_pct), velocidad del viento "
+        "(viento_kmh), dirección del viento (dir_viento_grados) y, si está disponible, "
+        "precipitación (precip_mm). Presentá los resultados en una tabla comparativa "
+        "e indicá cuál estación registra mayor temperatura y cuál mayor viento. "
+        "Añadí el timestamp de cada observación para confirmar que son datos recientes."
+    )

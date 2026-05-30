@@ -44,3 +44,53 @@ def guia_uso() -> str:
         "ORDER BY CAST(b.presupuesto AS REAL) DESC\n"
         "```\n"
     )
+
+
+@resource(
+    uri="uru://datastore/recetas-sql",
+    name="Recetas SQL para el datastore local",
+    description="Patrones SELECT/JOIN/GROUP BY/LIKE/CAST listos para usar con datastore_sql.",
+    module=MODULE,
+    mime_type="text/markdown",
+)
+def recetas_sql() -> str:
+    return (
+        "# Recetas SQL para el datastore local\n\n"
+        "Todas las consultas se ejecutan con `datastore_sql`. "
+        "Usá `datastore_list_tables` para ver los nombres exactos de tablas y columnas "
+        "antes de escribir la consulta. Los valores se guardan como **TEXT**.\n\n"
+        "## SELECT básico con límite\n\n"
+        "```sql\n"
+        "SELECT * FROM mi_tabla LIMIT 20\n"
+        "```\n\n"
+        "## Filtro con LIKE (texto parcial)\n\n"
+        "```sql\n"
+        "SELECT nombre, departamento FROM centros\n"
+        "WHERE departamento LIKE '%MONTEVIDEO%'\n"
+        "```\n\n"
+        "## Comparación numérica con CAST\n\n"
+        "```sql\n"
+        "SELECT nombre, poblacion FROM censo\n"
+        "WHERE CAST(poblacion AS INTEGER) > 100000\n"
+        "ORDER BY CAST(poblacion AS INTEGER) DESC\n"
+        "```\n\n"
+        "## GROUP BY con conteo\n\n"
+        "```sql\n"
+        "SELECT departamento, COUNT(*) AS total\n"
+        "FROM centros\n"
+        "GROUP BY departamento\n"
+        "ORDER BY total DESC\n"
+        "```\n\n"
+        "## JOIN entre dos tablas cargadas\n\n"
+        "```sql\n"
+        "SELECT a.depto, a.poblacion, b.presupuesto\n"
+        "FROM censo a JOIN gasto b ON a.depto = b.depto\n"
+        "ORDER BY CAST(b.presupuesto AS REAL) DESC\n"
+        "```\n\n"
+        "## Suma de columna numérica\n\n"
+        "```sql\n"
+        "SELECT subsistema, SUM(CAST(matricula AS REAL)) AS total_matricula\n"
+        "FROM oferta\n"
+        "GROUP BY subsistema\n"
+        "```\n"
+    )

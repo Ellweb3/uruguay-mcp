@@ -29,3 +29,7 @@ MODULE = "ine"
 # Cap ANDA / CKAN page sizes so a single call never returns a huge blob.
 MAX_ROWS = 100
 DEFAULT_ROWS = 20
+
+# Cap CKAN DataStore row fetches so a single query never returns a huge blob.
+MAX_DATASTORE_ROWS = 100
+DEFAULT_DATASTORE_ROWS = 20

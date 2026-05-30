@@ -11,7 +11,8 @@
 [![PyPI](https://img.shields.io/pypi/v/uruguay-mcp?color=blue&label=PyPI)](https://pypi.org/project/uruguay-mcp/)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 [![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-7C3AED)](https://modelcontextprotocol.io/)
-[![Tests](https://img.shields.io/badge/tests-204%20passing-brightgreen)](#development)
+[![CI](https://github.com/Ellweb3/uruguay-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Ellweb3/uruguay-mcp/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-225%20passing-brightgreen)](#development)
 [![Coverage](https://img.shields.io/badge/coverage-89%25-brightgreen)](#development)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
@@ -45,8 +46,8 @@ matter how many data sources are added.
 
 Every tool returns a unified envelope: `{ "_meta": { source, cached, lang, timestamp }, "data": ... }`.
 
-> At a glance: **5 meta-tools + 71 data tools across 15 modules**, plus **43
-> prompts** and **28 resources**.
+> At a glance: **5 meta-tools + 75 data tools across 15 modules**, plus **50
+> prompts** and **32 resources**.
 
 ## 📚 Data sources (modules)
 
@@ -54,12 +55,12 @@ Every tool returns a unified envelope: `{ "_meta": { source, cached, lang, times
 |---|---|---|---|:--:|
 | 🏛️ | `catalogodatos` | [catalogodatos.gub.uy](https://catalogodatos.gub.uy) — national CKAN catalog (~2680 datasets, 72 orgs) + DataStore SQL | CKAN REST | 9 |
 | 💵 | `bcu` | Banco Central del Uruguay — exchange rates | SOAP (`zeep`) | 4 |
-| 📊 | `ine` | Instituto Nacional de Estadística — ANDA / microdata | REST | 3 |
+| 📊 | `ine` | Instituto Nacional de Estadística — ANDA studies + national CKAN DataStore queries | REST | 7 |
 | 🌐 | `gubuy` | gub.uy public API / service catalog | CKAN REST | 4 |
 | 🚌 | `montevideo` | Intendencia de Montevideo — city CKAN + realtime transport | CKAN + REST | 11 |
 | 🗄️ | `datastore` | Cross-source SQLite workspace — load CSV/CKAN data, run read-only SQL JOINs | local SQLite | 4 |
 | 🛒 | `acce` | Agencia de Compras y Contrataciones del Estado — public procurement (OCDS) | OCDS REST/RSS + CKAN | 4 |
-| ⚖️ | `impo` | IMPO — legislation, normativa & Diario Oficial | REST (JSON) | 3 |
+| ⚖️ | `impo` | IMPO — legislation, normativa & Diario Oficial | REST (JSON) | 6 |
 | 🌦️ | `inumet` | Instituto Uruguayo de Meteorología — stations, forecast & alerts | REST + HTML | 3 |
 | 🏛️ | `parlamento` | Parlamento del Uruguay — datasets, attendance & activity (CKAN-backed) | CKAN REST | 4 |
 | 🗺️ | `ide` | IDE Uruguay (AGESIC) — spatial data: WFS layers, cadastral parcels & geocoding | WFS 2.0 + REST | 5 |
@@ -79,11 +80,11 @@ Each module also registers reusable **prompts** (parameterized Spanish
 instruction templates) and **resources** (static reference docs under the
 `uru://<module>/<path>` URI scheme), exposed natively through FastMCP.
 
-- **43 prompts** — e.g. `bcu_cotizacion_dolar_hoy`, `catalogo_buscar_por_tema`,
+- **50 prompts** — e.g. `bcu_cotizacion_dolar_hoy`, `catalogo_buscar_por_tema`,
   `ine_buscar_estudios`, `montevideo_proximo_bus`, `datastore_unir_dos_fuentes`,
   `acce_analizar_compra`, `impo_consultar_norma`, `inumet_clima_actual`,
   `ide_consultar_catastro`, `salud_consultar_medicamentos`, `noticias_ultimas`.
-- **28 resources** — e.g. `uru://bcu/codigos-moneda`,
+- **32 resources** — e.g. `uru://bcu/codigos-moneda`,
   `uru://catalogodatos/guia-de-uso`, `uru://montevideo/credenciales-transporte`,
   `uru://acce/glosario-ocds`, `uru://impo/esquema`, `uru://inumet/variables`,
   `uru://ide/capas-destacadas`, `uru://salud/fuentes`, `uru://mides/guia-recursos`.
@@ -180,7 +181,7 @@ everything it offers.
 ```bash
 uv venv && uv pip install -e ".[dev]"
 
-uv run pytest                  # 204 unit tests (HTTP mocked, offline) · 89% coverage
+uv run pytest                  # 225 unit tests (HTTP mocked, offline) · 89% coverage
 uv run pytest -m integration   # hits live government APIs
 uv run ruff check src tests
 uv run pyright
