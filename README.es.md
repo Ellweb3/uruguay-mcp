@@ -11,8 +11,8 @@
 [![PyPI](https://img.shields.io/pypi/v/uruguay-mcp?color=blue&label=PyPI)](https://pypi.org/project/uruguay-mcp/)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 [![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-7C3AED)](https://modelcontextprotocol.io/)
-[![Tests](https://img.shields.io/badge/tests-69%20passing-brightgreen)](#desarrollo)
-[![Coverage](https://img.shields.io/badge/coverage-86%25-brightgreen)](#desarrollo)
+[![Tests](https://img.shields.io/badge/tests-129%20passing-brightgreen)](#desarrollo)
+[![Coverage](https://img.shields.io/badge/coverage-88%25-brightgreen)](#desarrollo)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 🌎 **Español** · **[English](README.md)**
@@ -44,19 +44,23 @@ visible en el prompt se mantiene constante sin importar cuántas fuentes se agre
 
 Cada herramienta devuelve un sobre unificado: `{ "_meta": { source, cached, lang, timestamp }, "data": ... }`.
 
-> En resumen: **5 meta-herramientas + 31 herramientas de datos en 6 módulos**,
-> más **17 prompts** y **11 recursos**.
+> En resumen: **5 meta-herramientas + 49 herramientas de datos en 10 módulos**,
+> más **29 prompts** y **19 recursos**.
 
 ## 📚 Fuentes de datos (módulos)
 
 | | Módulo | Fuente | Protocolo | Herramientas |
 |---|---|---|---|:--:|
-| 🏛️ | `catalogodatos` | [catalogodatos.gub.uy](https://catalogodatos.gub.uy) — catálogo nacional CKAN (~2680 datasets, 72 organismos) | CKAN REST | 5 |
+| 🏛️ | `catalogodatos` | [catalogodatos.gub.uy](https://catalogodatos.gub.uy) — catálogo nacional CKAN (~2680 datasets, 72 organismos) + SQL sobre DataStore | CKAN REST | 9 |
 | 💵 | `bcu` | Banco Central del Uruguay — cotizaciones | SOAP (`zeep`) | 4 |
 | 📊 | `ine` | Instituto Nacional de Estadística — ANDA / microdatos | REST | 3 |
 | 🌐 | `gubuy` | gub.uy — catálogo de servicios y APIs del Estado | CKAN REST | 4 |
 | 🚌 | `montevideo` | Intendencia de Montevideo — CKAN municipal + transporte en tiempo real | CKAN + REST | 11 |
 | 🗄️ | `datastore` | Espacio SQLite multi-fuente — cargar datos CSV/CKAN y correr SQL de solo lectura (JOINs entre fuentes) | SQLite local | 4 |
+| 🛒 | `acce` | Agencia de Compras y Contrataciones del Estado — compras públicas (OCDS) | OCDS REST/RSS + CKAN | 4 |
+| ⚖️ | `impo` | IMPO — legislación, normativa y Diario Oficial | REST (JSON) | 3 |
+| 🌦️ | `inumet` | Instituto Uruguayo de Meteorología — estaciones, pronóstico y alertas | REST + HTML | 3 |
+| 🏛️ | `parlamento` | Parlamento del Uruguay — datasets, asistencias y actividades (vía CKAN) | CKAN REST | 4 |
 
 La parte de transporte de `montevideo` requiere credenciales OAuth2
 (`URUGUAY_MCP_MVD_CLIENT_ID` / `URUGUAY_MCP_MVD_CLIENT_SECRET`); sin ellas, las
@@ -70,10 +74,12 @@ en español, parametrizadas) y **recursos** (documentos de referencia estáticos
 bajo el esquema de URI `uru://<módulo>/<ruta>`), expuestos de forma nativa a
 través de FastMCP.
 
-- **17 prompts** — p. ej. `bcu_cotizacion_dolar_hoy`, `catalogo_buscar_por_tema`,
-  `ine_buscar_estudios`, `montevideo_proximo_bus`, `datastore_unir_dos_fuentes`.
-- **11 recursos** — p. ej. `uru://bcu/codigos-moneda`,
-  `uru://catalogodatos/guia-de-uso`, `uru://montevideo/credenciales-transporte`.
+- **29 prompts** — p. ej. `bcu_cotizacion_dolar_hoy`, `catalogo_buscar_por_tema`,
+  `ine_buscar_estudios`, `montevideo_proximo_bus`, `datastore_unir_dos_fuentes`,
+  `acce_analizar_compra`, `impo_consultar_norma`, `inumet_clima_actual`.
+- **19 recursos** — p. ej. `uru://bcu/codigos-moneda`,
+  `uru://catalogodatos/guia-de-uso`, `uru://montevideo/credenciales-transporte`,
+  `uru://acce/glosario-ocds`, `uru://impo/esquema`, `uru://inumet/variables`.
 
 Mirá **[EXAMPLES.md](EXAMPLES.md)** para escenarios de uso de punta a punta,
 incluidos los que combinan fuentes mediante `plan_query` / `execute_batch` y
@@ -151,8 +157,10 @@ src/uruguay_mcp/
 │   ├── errors.py        # errores tipados y localizados
 │   └── registry.py      # registro de tool/prompt/resource; @tool/@prompt/@resource
 └── modules/             # un paquete autónomo por fuente de datos
-    ├── catalogodatos/   ├── bcu/      ├── ine/
-    ├── gubuy/           ├── montevideo/   └── datastore/
+    ├── catalogodatos/   ├── bcu/          ├── ine/
+    ├── gubuy/           ├── montevideo/   ├── datastore/
+    ├── acce/            ├── impo/         ├── inumet/
+    └── parlamento/
 ```
 
 Cada módulo es independiente (`constants` · `schemas` · `client` · `tools` ·
@@ -164,7 +172,7 @@ todo lo que ofrece.
 ```bash
 uv venv && uv pip install -e ".[dev]"
 
-uv run pytest                  # 69 tests unitarios (HTTP mockeado, offline) · 86% cobertura
+uv run pytest                  # 129 tests unitarios (HTTP mockeado, offline) · 88% cobertura
 uv run pytest -m integration   # consulta las APIs de gobierno reales
 uv run ruff check src tests
 uv run pyright

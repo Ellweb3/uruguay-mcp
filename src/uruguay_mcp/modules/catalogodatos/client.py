@@ -47,3 +47,15 @@ async def group_list(params: dict[str, Any]) -> tuple[Any, bool, str]:
 
 async def datastore_search(params: dict[str, Any]) -> tuple[Any, bool, str]:
     return await _action("datastore_search", params)
+
+
+async def datastore_search_sql(sql: str) -> tuple[Any, bool, str]:
+    return await _action("datastore_search_sql", {"sql": sql})
+
+
+async def tag_list(params: dict[str, Any]) -> tuple[Any, bool, str]:
+    return await _action("tag_list", params)
+
+
+async def resource_show(resource_id: str) -> tuple[Any, bool, str]:
+    return await _action("resource_show", {"id": resource_id})

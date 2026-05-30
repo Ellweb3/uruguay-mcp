@@ -57,3 +57,25 @@ def catalogo_consultar_datastore(resource_id: str, filtro: str | None = None) ->
         f"{extra} Mostrá los campos disponibles y una muestra de filas, y comentá "
         "el total de registros encontrados."
     )
+
+
+@prompt(
+    name="catalogo_sql_consulta",
+    module=MODULE,
+    description="Instrucción para ejecutar una consulta SQL sobre el datastore de un recurso.",
+)
+def catalogo_sql_consulta(resource_id: str, objetivo: str | None = None) -> str:
+    meta = (
+        f" El objetivo es: {objetivo}."
+        if objetivo
+        else ""
+    )
+    return (
+        f"Primero verificá con catalogo_resource_show que el recurso '{resource_id}' "
+        "tenga datastore_active en true. Luego ejecutá una consulta SQL de solo "
+        "lectura con catalogo_datastore_sql. La tabla es el resource_id entre "
+        f'comillas dobles, por ejemplo: SELECT * FROM "{resource_id}" LIMIT 50.'
+        f"{meta} Usá una única sentencia SELECT (sin ';' intermedios, sin "
+        "comentarios y sin DDL/DML). Recordá que los registros incluyen columnas "
+        "internas de CKAN como _id y _full_text."
+    )

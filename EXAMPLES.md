@@ -271,6 +271,89 @@ cada recurso a una tabla SQLite y `datastore_sql` para el JOIN con SELECT.
 
 ---
 
+## 13. Compra pública del Estado por OCDS (acce)
+
+**Objetivo:** Listar las compras públicas más recientes publicadas por ACCE y
+abrir el detalle estructurado de una de ellas (estándar OCDS: tender, awards,
+items), sin autenticación.
+
+```text
+discover_tools(query="compras públicas recientes del Estado", limit=6)
+  -> acce_recientes, acce_get_compra, acce_buscar
+
+# Últimas compras publicadas (feed OCDS / RSS)
+call_tool("acce_recientes", { "limit": 10 })
+  -> lista de { id_compra, release_id, titulo, fecha }
+
+# Detalle OCDS de una compra puntual
+call_tool("acce_get_compra", { "id_compra": 1234567 })
+  -> { tender (objeto, value, items[]), awards[], releases[] }
+```
+
+`acce_recientes` lee el RSS/feed OCDS y devuelve `id_compra` + `release_id`
+para cada compra; pasá el `id_compra` a `acce_get_compra` para el `record` OCDS
+completo (las `tender.value`/`award.value` pueden venir nulas y los `items` se
+truncan a una muestra). Para buscar datasets de ACCE en el catálogo nacional
+usá `acce_buscar`.
+
+---
+
+## 14. Buscar y leer una ley o decreto (impo)
+
+**Objetivo:** Resolver una norma uruguaya (ley, decreto o la Constitución) a su
+texto estructurado en IMPO, partiendo de una búsqueda en lenguaje natural.
+
+```text
+discover_tools(query="texto de una ley uruguaya por número y año", limit=6)
+  -> impo_buscar_normativa, impo_get_norma, impo_diario_oficial
+
+# Búsqueda: si trae tipo+número+año, resuelve directo a la norma
+call_tool("impo_buscar_normativa", { "query": "ley 19210 inclusión financiera" })
+  -> resuelve a impo_get_norma o devuelve URLs de búsqueda (degraded)
+
+# Texto estructurado de una norma concreta
+call_tool("impo_get_norma", {
+  "tipo": "ley",
+  "numero": 19210,
+  "anio": 2014
+})
+  -> { titulo, metadata, articulos[] (con urlArticulo absoluto) }
+```
+
+`impo_get_norma` arma la ruta `/bases/{leyes|decretos|constitucion}/{n}-{año}`,
+maneja el encoding latin-1 de IMPO, limpia el HTML embebido y devuelve los
+artículos (capados por `max_articulos`). `version="original"` agrega
+`-originales` (solo ley/decreto). Para el Diario Oficial de un día usá
+`impo_diario_oficial` (devuelve las URLs canónicas de los PDF por sección).
+
+---
+
+## 15. Clima actual y alertas meteorológicas (inumet)
+
+**Objetivo:** Obtener la última observación de las estaciones automáticas del
+INUMET y verificar si hay advertencias/alertas vigentes.
+
+```text
+discover_tools(query="temperatura y viento actuales por estación", limit=6)
+  -> inumet_estaciones, inumet_alertas, inumet_pronostico
+
+# Última observación por estación automática (temp, humedad, viento, presión…)
+call_tool("inumet_estaciones", { "station": "Carrasco", "limit": 5 })
+  -> [{ estacion, temp, humedad, viento_kt, viento_kmh, presion, ... }]
+
+# ¿Hay advertencia vigente?
+call_tool("inumet_alertas", {})
+  -> { activa, nivel (amarilla|naranja|roja), detalle, pdf_url }
+```
+
+`inumet_estaciones` consume el JSON `.mch` de las EMA y camina cada serie hacia
+atrás hasta el último valor no nulo (el viento viene en nudos, con conversión a
+km/h). `inumet_alertas` e `inumet_pronostico` scrapean HTML y degradan a
+`status="partial"` si la página no parsea; `inumet_pronostico` da min/max y
+descripción por período.
+
+---
+
 ## Notas
 
 - Toda respuesta de data tool viene en el sobre estándar: `data`, `api`, `url`,

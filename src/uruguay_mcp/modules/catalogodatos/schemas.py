@@ -40,3 +40,36 @@ class DatastoreSearchArgs(BaseModel):
     query: str | None = Field(None, description="Texto de búsqueda dentro de los registros.")
     limit: int = Field(DEFAULT_ROWS, ge=1, le=MAX_ROWS, description="Cantidad de registros.")
     offset: int = Field(0, ge=0, description="Desplazamiento para paginación.")
+
+
+class DatastoreSqlArgs(BaseModel):
+    sql: str = Field(
+        ...,
+        description=(
+            "Consulta SELECT de solo lectura sobre el datastore. La tabla es el "
+            'resource_id entre comillas dobles, ej: SELECT * FROM "<resource_id>" '
+            "LIMIT 50. No se permiten múltiples sentencias, comentarios ni DDL/DML."
+        ),
+    )
+
+
+class TagsArgs(BaseModel):
+    query: str | None = Field(
+        None, description="Filtro de subcadena sobre los tags (ej. 'salud')."
+    )
+    limit: int = Field(
+        DEFAULT_ROWS,
+        ge=1,
+        le=MAX_ROWS,
+        description="Cantidad máxima de etiquetas (recortado del lado del cliente).",
+    )
+
+
+class RecentDatasetsArgs(BaseModel):
+    limit: int = Field(
+        DEFAULT_ROWS, ge=1, le=MAX_ROWS, description="Cantidad de datasets recientes."
+    )
+
+
+class ResourceArgs(BaseModel):
+    resource_id: str = Field(..., description="ID del recurso (resource).")

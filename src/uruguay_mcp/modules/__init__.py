@@ -14,6 +14,10 @@ ALL_MODULES = [
     "gubuy",
     "montevideo",
     "datastore",
+    "acce",
+    "impo",
+    "inumet",
+    "parlamento",
 ]
 
 
