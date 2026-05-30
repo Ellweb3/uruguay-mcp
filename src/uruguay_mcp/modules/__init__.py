@@ -24,6 +24,7 @@ ALL_MODULES = [
     "mides",
     "noticias",
     "bps",
+    "dgi",
 ]
 
 

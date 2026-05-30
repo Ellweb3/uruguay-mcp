@@ -12,8 +12,8 @@
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 [![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-7C3AED)](https://modelcontextprotocol.io/)
 [![CI](https://github.com/Ellweb3/uruguay-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Ellweb3/uruguay-mcp/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-240%20passing-brightgreen)](#development)
-[![Coverage](https://img.shields.io/badge/coverage-89%25-brightgreen)](#development)
+[![Tests](https://img.shields.io/badge/tests-252%20passing-brightgreen)](#development)
+[![Coverage](https://img.shields.io/badge/coverage-86%25-brightgreen)](#development)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 🌎 **[Español](README.es.md)** · **English**
@@ -26,8 +26,8 @@ An [MCP](https://modelcontextprotocol.io/) server that gives AI agents structure
 access to **Uruguay's open government data** — the national data catalog, the
 Central Bank, the statistics institute, Montevideo's city data & realtime
 transport, spatial data (IDE), education, health, social programs, government
-social-security statistics (BPS), news, and the gub.uy service catalog —
-behind a single **meta-discovery**
+social-security statistics (BPS), tax reference values (DGI), news, and the
+gub.uy service catalog — behind a single **meta-discovery**
 layer.
 
 ## ✨ Why a meta-discovery layer?
@@ -47,8 +47,8 @@ matter how many data sources are added.
 
 Every tool returns a unified envelope: `{ "_meta": { source, cached, lang, timestamp }, "data": ... }`.
 
-> At a glance: **5 meta-tools + 80 data tools across 16 modules**, plus **52
-> prompts** and **34 resources**.
+> At a glance: **5 meta-tools + 84 data tools across 17 modules**, plus **54
+> prompts** and **36 resources**.
 
 ## 📚 Data sources (modules)
 
@@ -62,6 +62,7 @@ Every tool returns a unified envelope: `{ "_meta": { source, cached, lang, times
 | 🗄️ | `datastore` | Cross-source SQLite workspace — load CSV/CKAN data, run read-only SQL JOINs | local SQLite | 4 |
 | 🛒 | `acce` | Agencia de Compras y Contrataciones del Estado — public procurement (OCDS) | OCDS REST/RSS + CKAN | 4 |
 | ⚖️ | `impo` | IMPO — legislation, normativa & Diario Oficial | REST (JSON) | 6 |
+| 🧾 | `dgi` | DGI (tax authority) — reference values (UI, IPC, ITP & late-payment rates) as `.ods` + statistical bulletins | scrape + ODS/PDF | 4 |
 | 🌦️ | `inumet` | Instituto Uruguayo de Meteorología — stations, forecast & alerts | REST + HTML | 3 |
 | 🏛️ | `parlamento` | Parlamento del Uruguay — datasets, attendance & activity (CKAN-backed) | CKAN REST | 4 |
 | 🗺️ | `ide` | IDE Uruguay (AGESIC) — spatial data: WFS layers, cadastral parcels & geocoding | WFS 2.0 + REST | 5 |
@@ -82,12 +83,13 @@ Each module also registers reusable **prompts** (parameterized Spanish
 instruction templates) and **resources** (static reference docs under the
 `uru://<module>/<path>` URI scheme), exposed natively through FastMCP.
 
-- **52 prompts** — e.g. `bcu_cotizacion_dolar_hoy`, `catalogo_buscar_por_tema`,
-  `bps_pasividades_actuales`,
+- **54 prompts** — e.g. `bcu_cotizacion_dolar_hoy`, `catalogo_buscar_por_tema`,
+  `bps_pasividades_actuales`, `dgi_valor_referencia`,
   `ine_buscar_estudios`, `montevideo_proximo_bus`, `datastore_unir_dos_fuentes`,
   `acce_analizar_compra`, `impo_consultar_norma`, `inumet_clima_actual`,
   `ide_consultar_catastro`, `salud_consultar_medicamentos`, `noticias_ultimas`.
-- **34 resources** — e.g. `uru://bcu/codigos-moneda`, `uru://bps/catalogo-indicadores`,
+- **36 resources** — e.g. `uru://bcu/codigos-moneda`, `uru://bps/catalogo-indicadores`,
+  `uru://dgi/catalogo-valores`,
   `uru://catalogodatos/guia-de-uso`, `uru://montevideo/credenciales-transporte`,
   `uru://acce/glosario-ocds`, `uru://impo/esquema`, `uru://inumet/variables`,
   `uru://ide/capas-destacadas`, `uru://salud/fuentes`, `uru://mides/guia-recursos`.
@@ -173,7 +175,7 @@ src/uruguay_mcp/
     ├── acce/            ├── impo/         ├── inumet/
     ├── parlamento/      ├── ide/          ├── educacion/
     ├── salud/           ├── mides/        ├── noticias/
-    └── bps/
+    ├── bps/             └── dgi/
 ```
 
 Each module package is independent (`constants` · `schemas` · `client` ·
@@ -185,7 +187,7 @@ everything it offers.
 ```bash
 uv venv && uv pip install -e ".[dev]"
 
-uv run pytest                  # 240 unit tests (HTTP mocked, offline) · 89% coverage
+uv run pytest                  # 252 unit tests (HTTP mocked, offline) · 86% coverage
 uv run pytest -m integration   # hits live government APIs
 uv run ruff check src tests
 uv run pyright

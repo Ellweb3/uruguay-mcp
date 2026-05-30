@@ -1,6 +1,6 @@
 [project]
 name = "uruguay-mcp"
-version = "0.4.1"
+version = "0.4.2"
 description = "MCP server for Uruguay's open government data (national catalog, BCU, INE, Montevideo, gub.uy)"
 readme = "README.md"
 requires-python = ">=3.11"
