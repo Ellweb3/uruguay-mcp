@@ -22,6 +22,12 @@ htmlcov/
 *.db
 .cache/
 
+# Secrets / credentials — never commit
+.creds/
+*.token
+.env
+.pypirc
+
 # Editors / OS
 .DS_Store
 .idea/
