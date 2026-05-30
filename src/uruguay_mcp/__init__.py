@@ -1,3 +1,3 @@
 """uruguay-mcp — MCP server for Uruguay's open government data."""
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
